@@ -1,0 +1,72 @@
+@import "tailwindcss";
+
+:root {
+  background: #2e2e2e;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-custom);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-custom), Arial, Helvetica, sans-serif;
+}
+
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none; /* Chrome, Safari and Opera */
+  }
+
+  .thin-dark-scrollbar::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+    z-index: 80;
+  }
+ 
+   /* Firefox */
+   .thin-dark-scrollbar {
+     scrollbar-width: thin;
+     scrollbar-color: #7e7e7e transparent;
+   }
+
+  .thin-dark-scrollbar::-webkit-scrollbar-track {
+    background-color: transparent;
+    border-radius: 10px;
+  }
+
+  .thin-dark-scrollbar::-webkit-scrollbar-thumb {
+    background-color: #707070;
+    border-radius: 10px;
+    border: 2px solid #2e2e2e;
+  }
+
+  .thin-dark-scrollbar::-webkit-scrollbar-corner {
+    background-color: transparent;
+  }
+}
+
+@layer components {
+  @keyframes glow {
+    0%, 100% {
+      box-shadow: 0 0 0 rgba(255, 255, 255, 0);
+      border-color: #525252;
+    }
+    50% {
+      box-shadow: 0 0 8px rgba(255, 255, 255, 0.3);
+      border-color: #a3a3a3;
+    }
+  }
+  
+  .animate-glow {
+    animation: glow 3s ease-in-out infinite;
+  }
+}
