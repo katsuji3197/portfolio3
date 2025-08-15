@@ -4,6 +4,7 @@ import ProjectsCarousel from '@/components/projects-carousel';
 import { PROJECTS } from '@/data/projects';
 import TypingText from '@/components/typing-text';
 import PrimaryButton from '@/components/primary-button';
+import Image from 'next/image';
 
 export default function Home() {
   return (
@@ -12,7 +13,7 @@ export default function Home() {
         <div className="pb-12 md:pb-0 flex flex-col items-start justify-center gap-6">
           <h1 className="text-2xl md:text-4xl font-bold leading-12 h-24">
             <TypingText
-              lines={['Weaving a Kinder', 'Digital World.']}
+              lines={['Weaving a Kinder', 'Digital Universe.']}
               speedMs={20}
               startDelayMs={150}
               showCursor={false}
@@ -47,7 +48,7 @@ export default function Home() {
 
         <ScrollButton className="absolute md:bottom-6 bottom-24 left-1/2 -translate-x-1/2">
           <div className="flex flex-col items-center justify-center text-sm font-medium text-neutral-300">
-            <div>Scroll</div>
+            <div>NEXT</div>
             <div>↓</div>
           </div>
         </ScrollButton>
@@ -56,7 +57,7 @@ export default function Home() {
       <section className="min-h-[700px] h-screen bg-neutral-900/10 2xl:flex justify-center items-center backdrop-blur-xs border-y-[1px] border-neutral-500 py-16">
         <div className="flex flex-col 2xl:max-w-[1500px] gap-10 h-full justify-center items-stretch ">
           <div className="flex items-end justify-between px-4 sm:px-24 xl:px-48">
-            <div className="flex items-end gap-2">
+            <div className="flex items-end gap-2 ">
               <h2 className="text-2xl font-bold">Projects</h2>
               <p className="text-sm text-neutral-400 font-medium tracking-wider">
                 制作実績
@@ -66,6 +67,60 @@ export default function Home() {
           </div>
           <div className="px-4 sm:px-24 xl:px-48">
             <ProjectsCarousel projects={PROJECTS} />
+          </div>
+        </div>
+        <ScrollButton className="absolute bottom-6 left-1/2 -translate-x-1/2">
+          <div className="flex flex-col items-center justify-center text-sm font-medium text-neutral-300">
+            <div>NEXT</div>
+            <div>↓</div>
+          </div>
+        </ScrollButton>
+      </section>
+
+      <section className="min-h-[700px] w-full h-screen justify-center items-center">
+        <div className="flex flex-col gap-10 h-full justify-center items-center w-full ">
+          <div className="flex items-center justify-between px-4 sm:px-24 xl:px-48 2xl:max-w-[1500px] w-full">
+            <div className="flex items-end gap-2">
+              <h2 className="text-2xl font-bold">Profile</h2>
+              <p className="text-sm text-neutral-400 font-medium tracking-wider">
+                私について
+              </p>
+            </div>
+            <PrimaryButton href="/projects">詳しく見る</PrimaryButton>
+          </div>
+          <div className="w-full flex items-start justify-between px-4 sm:px-24 xl:px-48 2xl:max-w-[1500px]">
+            <div className="flex items-center md:flex-col w-full md:w-fit gap-3 p-2 md:p-4 bg-neutral-900/10 backdrop-blur-xs border-[1px] border-neutral-700 rounded-lg">
+              <Image
+                src="/img/katsuji-fish.jpg"
+                alt="profile"
+                width={1000}
+                height={1000}
+                className="w-36 h-36 md:w-full md:h-full object-cover rounded-lg"
+              />
+              <div className="flex flex-col gap-2 w-full">
+                <div className="flex flex-col md:flex-row items-end gap-2 pt-1">
+                  <h2 className="text-xl md:text-2xl font-medium text-neutral-200 tracking-wider">
+                    中辻 基希
+                  </h2>
+                  <p className="text-sm md:text-md text-neutral-400 font-medium tracking-wider">
+                    NAKATSUJI Motoki
+                  </p>
+                </div>
+                <p className="text-xs md:text-md text-end md:text-start text-neutral-500 font-medium">
+                  UI Designer / Frontend Developer
+                </p>
+                <div className="h-[1px] w-full bg-neutral-700" />
+                <ul className="flex flex-col gap-2">
+                  <li className="flex flex-col items-end md:items-start text-end md:text-start gap-2 text-neutral-400 text-sm md:text-md">
+                    <ul>
+                      金沢工業大学 情報フロンティア学部
+                      <br className="md:hidden" /> メディア情報学科 4年
+                    </ul>
+                    <ul></ul>
+                  </li>
+                </ul>
+              </div>
+            </div>
           </div>
         </div>
       </section>

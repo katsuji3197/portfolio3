@@ -16,6 +16,7 @@ import {
   Line,
   LineBasicMaterial,
   Vector3,
+  Texture,
 } from 'three';
 
 export default function NightSky() {
@@ -49,6 +50,33 @@ export default function NightSky() {
     renderer.setClearColor(0x000000, 0); // 透明
     container.appendChild(renderer.domElement);
 
+    // 円形のテクスチャを作成
+    const createCircularTexture = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 64;
+      canvas.height = 64;
+      const ctx = canvas.getContext('2d')!;
+
+      // 背景を透明にする
+      ctx.clearRect(0, 0, 64, 64);
+
+      // グラデーションで円形を作成
+      const gradient = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+      gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
+      gradient.addColorStop(0.6, 'rgba(255, 255, 255, 0.9)');
+      gradient.addColorStop(0.8, 'rgba(255, 255, 255, 0.5)');
+      gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, 64, 64);
+
+      const texture = new Texture(canvas);
+      texture.needsUpdate = true;
+      return texture;
+    };
+
+    const circularTexture = createCircularTexture();
+
     const root = new Group();
     scene.add(root);
 
@@ -75,7 +103,7 @@ export default function NightSky() {
         positions[idx + 1] = y;
         positions[idx + 2] = z;
 
-        // 色を確率で決定: 10% 赤, 10% 青, それ以外はデフォルト色
+        // 色を確率で決定: 5% コーラル, 5% コーンフラワーブルー, それ以外はデフォルト色
         let chosen = new Color(color);
         const r = Math.random();
         if (r < 0.05) {
@@ -95,25 +123,95 @@ export default function NightSky() {
 
       const material = new PointsMaterial({
         color: new Color(color),
-        size,
+        size: size * 1.2,
         transparent: true,
-        opacity: 0.7,
+        opacity: 0.9,
         depthWrite: false,
         blending: AdditiveBlending,
         sizeAttenuation: true,
         vertexColors: true,
+        map: circularTexture,
+        alphaTest: 0.01,
       });
 
       const points = new Points(geometry, material);
       return { points, geometry, material };
     };
 
+    // --- ここから天の川の生成 ---
+    const createMilkyWay = (count: number, color: string, size: number) => {
+      const geometry = new BufferGeometry();
+      const positions = new Float32Array(count * 3);
+      const colors = new Float32Array(count * 3);
+
+      const bandWidth = 200;
+      const bandLength = 12000;
+      const thickness = 600; // 太さを150から50に変更
+
+      for (let i = 0; i < count; i++) {
+        // 帯状の領域に星を配置
+        const x = (Math.random() - 0.5) * bandLength;
+        // yとzで楕円形の断面を表現し、中心部の密度を高くする
+        const u = Math.random() * 1 * Math.PI;
+        const r = Math.sqrt(Math.random()); // 中心に寄せるための平方根
+        const y = r * Math.cos(u) * (bandWidth / 2);
+        const z = r * Math.sin(u) * (thickness / 2);
+
+        const idx = i * 3;
+        positions[idx] = x;
+        positions[idx + 1] = y;
+        positions[idx + 2] = z;
+
+        // 天の川の色合いを調整（青白く、時々黄色）
+        let chosen = new Color(color);
+        const rand = Math.random();
+        if (rand < 0.1) {
+          chosen = new Color('#a2b8ff'); // 淡い青
+        } else if (rand < 0.15) {
+          chosen = new Color('#fff4d8'); // 淡い黄
+        }
+        colors[idx] = chosen.r;
+        colors[idx + 1] = chosen.g;
+        colors[idx + 2] = chosen.b;
+      }
+
+      geometry.setAttribute(
+        'position',
+        new Float32BufferAttribute(positions, 3)
+      );
+      geometry.setAttribute('color', new Float32BufferAttribute(colors, 3));
+
+      const material = new PointsMaterial({
+        size: size * 1.1,
+        transparent: true,
+        opacity: 0.6,
+        depthWrite: false,
+        blending: AdditiveBlending,
+        sizeAttenuation: true,
+        vertexColors: true,
+        map: circularTexture,
+        alphaTest: 0.1,
+      });
+
+      const points = new Points(geometry, material);
+      return { points, geometry, material };
+    };
+    // --- ここまで天の川の生成 ---
+
     const layer1 = createStars(6000, '#eaf2ff', 1.8, 1100);
     const layer2 = createStars(3600, '#d9e6ff', 2.2, 1400);
     const layer3 = createStars(2600, '#ffffff', 2.8, 1700);
+
+    // 天の川を生成してシーンに追加
+    const milkyWay = createMilkyWay(32000, '#ffffff', 1.2);
+    // 天の川を斜めに傾ける
+    milkyWay.points.rotation.x = Math.PI / 6;
+    milkyWay.points.rotation.z = -Math.PI / 6;
+
     root.add(layer1.points);
     root.add(layer2.points);
     root.add(layer3.points);
+    root.add(milkyWay.points); // シーンに天の川を追加
 
     // 流れ星（Shooting Stars）
     type ShootingStar = {
@@ -129,8 +227,8 @@ export default function NightSky() {
       active: boolean;
     };
 
-    const maxShootingStars = 64;
-    const tailSegments = 1024;
+    const maxShootingStars = 1024;
+    const tailSegments = 30;
     const shootingStars: ShootingStar[] = [];
 
     const makeShootingStar = (): ShootingStar => {
@@ -141,25 +239,25 @@ export default function NightSky() {
         new Float32BufferAttribute(new Float32Array([0, 0, 0]), 3)
       );
       const headMaterial = new PointsMaterial({
-        color: new Color('#ffffff'),
-        size: 3,
+        color: new Color('#a2b8ff'),
+        size: 2.5,
         transparent: true,
-        opacity: 0.0,
+        opacity: 0.8,
         depthWrite: false,
         blending: AdditiveBlending,
         sizeAttenuation: true,
+        map: circularTexture,
+        alphaTest: 0.1,
       });
       const head = new Points(headGeometry, headMaterial);
 
       // tail
       const tailGeometry = new BufferGeometry();
-      // 初期は全て同一点
       const initialTail = new Float32Array(tailSegments * 3).fill(0);
       tailGeometry.setAttribute(
         'position',
         new Float32BufferAttribute(initialTail, 3)
       );
-      // 頂点カラー（減衰）でモーションブラー風の残像を表現
       const initialColors = new Float32Array(tailSegments * 3);
       for (let i = 0; i < tailSegments; i += 1) {
         const attenuation = Math.pow(0.85, i);
@@ -173,7 +271,7 @@ export default function NightSky() {
         new Float32BufferAttribute(initialColors, 3)
       );
       const tailMaterial = new LineBasicMaterial({
-        color: 0xffffff,
+        color: 0xa2b8ff,
         transparent: true,
         opacity: 0.0,
         blending: AdditiveBlending,
@@ -197,7 +295,7 @@ export default function NightSky() {
         ),
         velocity: new Vector3(0, 0, 0),
         age: 0,
-        life: 8,
+        life: 48,
         active: false,
       };
     };
@@ -205,32 +303,21 @@ export default function NightSky() {
     const activateShootingStar = (star: ShootingStar) => {
       // 画面右上付近から左下方向へ
       const startX = 900 + Math.random() * 400;
-      const startY = 500 + Math.random() * 400;
+      const startY = 700 + Math.random() * 400;
       const startZ = -100 + Math.random() * 200;
       star.group.position.set(startX, startY, startZ);
-      star.velocity.set(
-        -600 - Math.random() * 400,
-        -400 - Math.random() * 300,
-        0
-      );
+      star.velocity.set(-200 - Math.random() * 10, -133 - Math.random() * 5, 0);
       star.age = 0;
-      star.life = 1.6 + Math.random() * 0.8;
+      star.life = 8 + Math.random() * 41;
       star.active = true;
       star.headMaterial.opacity = 0.9;
       star.tailMaterial.opacity = 0.7;
-      // テール初期化（現在位置に沿って並べる）
-      star.tailPositions = Array.from(
-        { length: tailSegments },
-        (_, i) =>
-          new Vector3(
-            -i * star.velocity.x * 0.01,
-            -i * star.velocity.y * 0.01,
-            0
-          )
-      );
+
+      star.tailPositions.forEach(p => p.set(0, 0, 0));
       updateTailGeometry(star, 1.0);
-      if ((root as Group).children.indexOf(star.group) === -1) {
-        root.add(star.group);
+
+      if (scene.children.indexOf(star.group) === -1) {
+        scene.add(star.group);
       }
     };
 
@@ -238,16 +325,16 @@ export default function NightSky() {
       star.active = false;
       star.headMaterial.opacity = 0.0;
       star.tailMaterial.opacity = 0.0;
-      if ((root as Group).children.indexOf(star.group) !== -1) {
-        root.remove(star.group);
+      if (scene.children.indexOf(star.group) !== -1) {
+        scene.remove(star.group);
       }
     };
 
     const updateTailGeometry = (star: ShootingStar, fade: number) => {
-      const positionAttr = (star.tail.geometry as BufferGeometry).getAttribute(
+      const positionAttr = star.tail.geometry.getAttribute(
         'position'
       ) as Float32BufferAttribute;
-      const colorAttr = (star.tail.geometry as BufferGeometry).getAttribute(
+      const colorAttr = star.tail.geometry.getAttribute(
         'color'
       ) as Float32BufferAttribute;
       for (let i = 0; i < tailSegments; i += 1) {
@@ -282,6 +369,7 @@ export default function NightSky() {
       layer1.points.rotation.y += 0.0003;
       layer2.points.rotation.y += 0.0001;
       layer3.points.rotation.y += 0.00005;
+      milkyWay.points.rotation.y += 0.00008; // 天の川もゆっくり回転
 
       // カメラのゆるいドリフト
       camera.position.x = Math.sin(elapsed * 0.15) * 20;
@@ -290,7 +378,7 @@ export default function NightSky() {
 
       // 流れ星のスポーン（確率的）
       if (dt > 0) {
-        const shouldSpawn = Math.random() < 0.25 * dt; // 平均4秒に1回程度
+        const shouldSpawn = Math.random() < 1.2 * dt; // 平均1秒に1回程度
         if (shouldSpawn) {
           const candidate = shootingStars.find(s => !s.active);
           if (candidate) {
@@ -303,23 +391,22 @@ export default function NightSky() {
       for (const star of shootingStars) {
         if (!star.active || dt === 0) continue;
         star.age += dt;
-        // 位置更新
-        star.group.position.x += star.velocity.x * dt;
-        star.group.position.y += star.velocity.y * dt;
-        // テール更新（先頭に現在位置、末尾を落とす）
+
+        const deltaMove = star.velocity.clone().multiplyScalar(dt);
+        star.group.position.add(deltaMove);
+        star.tailPositions.forEach(p => p.sub(deltaMove));
         star.tailPositions.pop();
         star.tailPositions.unshift(new Vector3(0, 0, 0));
-        // ローカル→ワールド不要。group原点にheadがあるため、テールはローカル座標でOK
-        // ageに応じてフェードアウト
+
         const fade = Math.max(0, 1 - star.age / star.life);
         star.headMaterial.opacity = 0.9 * fade;
         star.tailMaterial.opacity = 0.8 * fade;
+
         updateTailGeometry(star, fade);
 
-        // 画面外 or 寿命で終了
         const outOfBounds =
-          star.group.position.x < -1200 ||
-          star.group.position.y < -900 ||
+          star.group.position.x < -1500 ||
+          star.group.position.y < -1200 ||
           star.group.position.x > 1500 ||
           star.group.position.y > 1200;
         if (star.age > star.life || outOfBounds) {
@@ -344,12 +431,12 @@ export default function NightSky() {
       window.removeEventListener('resize', onResize);
       // 流れ星の破棄
       for (const star of shootingStars) {
-        if ((root as Group).children.indexOf(star.group) !== -1) {
-          root.remove(star.group);
+        if (scene.children.indexOf(star.group) !== -1) {
+          scene.remove(star.group);
         }
-        (star.head.geometry as BufferGeometry).dispose();
+        star.head.geometry.dispose();
         star.headMaterial.dispose();
-        (star.tail.geometry as BufferGeometry).dispose();
+        star.tail.geometry.dispose();
         star.tailMaterial.dispose();
       }
       layer1.geometry.dispose();
@@ -358,6 +445,9 @@ export default function NightSky() {
       layer2.material.dispose();
       layer3.geometry.dispose();
       layer3.material.dispose();
+      milkyWay.geometry.dispose(); // 天の川のリソースを解放
+      milkyWay.material.dispose(); // 天の川のリソースを解放
+      circularTexture.dispose(); // 円形テクスチャの破棄
       renderer.dispose();
       if (renderer.domElement && container.contains(renderer.domElement)) {
         container.removeChild(renderer.domElement);

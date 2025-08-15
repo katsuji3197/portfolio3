@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import MusicConsentPopup from './music-consent-popup';
 
 interface HeaderProps {
   title?: string;
@@ -22,6 +23,51 @@ export default function Header({
     { href: '/contact', label: 'Contact', subLabel: 'お問い合わせ' },
   ],
 }: HeaderProps) {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [volume, setVolume] = useState(0.3);
+  const [showConsentPopup, setShowConsentPopup] = useState(true);
+  const [hasConsented, setHasConsented] = useState(false);
+  const audioRef = useRef<HTMLAudioElement>(null);
+
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.volume = volume;
+      audioRef.current.loop = true;
+    }
+  }, [volume]);
+
+  const togglePlay = () => {
+    if (audioRef.current) {
+      if (isPlaying) {
+        audioRef.current.pause();
+      } else {
+        audioRef.current.play();
+      }
+      setIsPlaying(!isPlaying);
+    }
+  };
+
+  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newVolume = parseFloat(e.target.value);
+    setVolume(newVolume);
+    if (audioRef.current) {
+      audioRef.current.volume = newVolume;
+    }
+  };
+
+  const handleConsent = () => {
+    setHasConsented(true);
+    setShowConsentPopup(false);
+    if (audioRef.current) {
+      audioRef.current.play();
+      setIsPlaying(true);
+    }
+  };
+
+  const handleDecline = () => {
+    setHasConsented(false);
+    setShowConsentPopup(false);
+  };
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isHeaderVisibleAfterScroll, setIsHeaderVisibleAfterScroll] =
     useState(false);
@@ -75,6 +121,20 @@ export default function Header({
 
   return (
     <>
+      <audio
+        ref={audioRef}
+        src="/music/Letter_Home_by_Ikson.mp3"
+        preload="metadata"
+      />
+
+      {showConsentPopup && (
+        <MusicConsentPopup
+          onConsent={handleConsent}
+          onDecline={handleDecline}
+          isHeaderVisible={isHeaderVisibleAfterScroll}
+        />
+      )}
+
       <header
         className={`fixed top-0 left-0 right-0 z-50 bg-neutral-900/40 backdrop-blur-xs border-b-[1px] border-neutral-500 transform transition-transform duration-300 ${headerTranslateClass}`}
       >
@@ -218,6 +278,55 @@ export default function Header({
                   </Link>
                 );
               })}
+
+              {/* 音楽プレイヤー */}
+              <div className="border-t border-neutral-500 pt-6 mt-6">
+                <div className="px-4 mb-3">
+                  <p className="text-sm text-neutral-400">BGM</p>
+                </div>
+                <div className="flex items-center gap-3 px-4">
+                  <button
+                    onClick={togglePlay}
+                    className="w-8 h-8 rounded-full bg-neutral-800/50 hover:bg-neutral-700/50 transition-colors flex items-center justify-center text-neutral-200 border border-neutral-500"
+                    aria-label={isPlaying ? '音楽を停止' : '音楽を再生'}
+                  >
+                    {isPlaying ? (
+                      <svg
+                        className="w-4 h-4"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path d="M6 4h2v12H6V4zm6 0h2v12h-2V4z" />
+                      </svg>
+                    ) : (
+                      <svg
+                        className="w-4 h-4"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
+                      </svg>
+                    )}
+                  </button>
+
+                  <div className="flex flex-col gap-1">
+                    <span className="text-sm text-neutral-400">音量</span>
+
+                    <input
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.1"
+                      value={volume}
+                      onChange={handleVolumeChange}
+                      className="w-full h-1 bg-neutral-700/50 rounded-lg appearance-none cursor-pointer slider"
+                      style={{
+                        background: `linear-gradient(to right, #a855f7 0%, #a855f7 ${volume * 100}%, #374151 ${volume * 100}%, #374151 100%)`,
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
           </nav>
         </div>
