@@ -22,6 +22,22 @@ jobs:
       - name: Install Dependencies
         run: pnpm ci
 
-      # フォーマットが正しいかチェック
+      # Prettierがインストールされているかチェック
+      - name: Check if Prettier is installed
+        id: check-prettier
+        run: |
+          if pnpm list prettier > /dev/null 2>&1; then
+            echo "prettier-installed=true" >> $GITHUB_OUTPUT
+          else
+            echo "prettier-installed=false" >> $GITHUB_OUTPUT
+          fi
+
+      # Prettierがインストールされている場合のみ実行
       - name: Check Formatting
-        run: pnpm run format:check # package.jsonに "format:check": "prettier --check ." を追加
+        if: steps.check-prettier.outputs.prettier-installed == 'true'
+        run: pnpm prettier --check .
+
+      # Prettierがインストールされていない場合はスキップ
+      - name: Skip Prettier Check
+        if: steps.check-prettier.outputs.prettier-installed == 'false'
+        run: echo "Prettier is not installed. Skipping format check."

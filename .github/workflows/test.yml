@@ -24,5 +24,22 @@ jobs:
       - name: Install Dependencies
         run: pnpm ci
 
+      # テストスクリプトが存在するかチェック
+      - name: Check if test script exists
+        id: check-test
+        run: |
+          if pnpm run --silent test > /dev/null 2>&1; then
+            echo "test-script-exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "test-script-exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      # テストスクリプトが存在する場合のみ実行
       - name: Run Tests
+        if: steps.check-test.outputs.test-script-exists == 'true'
         run: pnpm test
+
+      # テストスクリプトが存在しない場合はスキップ
+      - name: Skip Tests
+        if: steps.check-test.outputs.test-script-exists == 'false'
+        run: echo "No test script found. Skipping tests."

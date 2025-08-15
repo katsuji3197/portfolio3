@@ -30,13 +30,17 @@ jobs:
         with:
           # プロジェクトで使用しているNode.jsのバージョンを指定
           node-version: "20"
-          # npmのキャッシュを有効にし、インストールを高速化
+          # pnpmのキャッシュを有効にし、インストールを高速化
           cache: "pnpm"
 
       # 3. 依存パッケージをインストールする
       - name: Install Dependencies
         run: pnpm ci
 
-      # 4. Lintチェックを実行する
+      # 4. TypeScriptの型チェックを実行する
+      - name: Type Check
+        run: pnpm tsc --noEmit
+
+      # 5. Lintチェックを実行する
       - name: Run Lint
-        run: pnpm run lint
+        run: pnpm lint
