@@ -1,0 +1,136 @@
+name: Copilot Chat Integration
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: ['main']
+  issue_comment:
+    types: [created]
+
+jobs:
+  copilot-chat:
+    name: Copilot Chat Integration
+    runs-on: ubuntu-latest
+    if: contains(github.event.comment.body, '@copilot') || github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Analyze PR Changes
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { data: files } = await github.rest.pulls.listFiles({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number
+            });
+
+            // 変更されたファイルの分析
+            const changedFiles = files.map(file => file.filename);
+            const addedLines = files.reduce((sum, file) => sum + file.additions, 0);
+            const deletedLines = files.reduce((sum, file) => sum + file.deletions, 0);
+
+            // 複雑度の分析
+            const complexFiles = files.filter(file => file.additions > 50 || file.deletions > 50);
+            const newFiles = files.filter(file => file.status === 'added');
+            const modifiedFiles = files.filter(file => file.status === 'modified');
+
+            // Copilotレビューコメントの作成
+            const reviewComment = `## 🤖 Copilot 自動分析結果
+
+            ### 📊 変更統計
+            - 変更されたファイル数: **${changedFiles.length}**
+            - 追加された行数: **${addedLines}**
+            - 削除された行数: **${deletedLines}**
+            - 新規ファイル: **${newFiles.length}**
+            - 修正ファイル: **${modifiedFiles.length}**
+
+            ### ⚠️ 注意が必要なファイル
+            ${complexFiles.length > 0 ? 
+              complexFiles.map(file => `- \`${file.filename}\` (${file.additions}行追加, ${file.deletions}行削除)`).join('\n') : 
+              '特になし'
+            }
+
+            ### 🔍 レビュー対象ファイル
+            ${changedFiles.map(file => `- \`${file}\``).join('\n')}
+
+            ### 💡 Copilotレビュー依頼
+            このPRをレビューするには、以下のコメントを追加してください：
+
+            \`\`\`
+            @copilot このPRをレビューして、以下の観点から分析してください：
+            1. コードの品質と可読性
+            2. セキュリティ上の問題
+            3. パフォーマンスの改善点
+            4. ベストプラクティスの適用
+            5. テストの網羅性
+            \`\`\`
+
+            ---
+            *この分析は自動生成されています。詳細なレビューはCopilot Chatを使用してください。*`;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: reviewComment
+            });
+
+      - name: Respond to Copilot Mentions
+        if: github.event_name == 'issue_comment' && contains(github.event.comment.body, '@copilot')
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const comment = context.payload.comment.body;
+            const issueNumber = context.payload.issue.number;
+
+            // Copilotメンションへの応答
+            const response = `## 🤖 Copilot 応答
+
+            こんにちは！PRのレビュー依頼を受け取りました。
+
+            ### 📋 レビュー依頼内容
+            ${comment.replace('@copilot', '').trim()}
+
+            ### 🔄 次のステップ
+            1. **手動レビュー**: 変更されたファイルを詳細に確認してください
+            2. **テスト実行**: \`pnpm test\` でテストを実行してください
+            3. **セキュリティチェック**: \`pnpm audit\` でセキュリティ監査を実行してください
+            4. **型チェック**: \`pnpm type-check\` で型安全性を確認してください
+
+            ### 💡 レビューのポイント
+            - コードの可読性と保守性
+            - エラーハンドリングの適切性
+            - パフォーマンスへの影響
+            - セキュリティ上の問題
+            - テストの網羅性
+
+            ---
+            *この応答は自動生成されています。詳細なレビューは手動で行ってください。*`;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              body: response
+            });
