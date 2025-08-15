@@ -17,8 +17,8 @@ export default function Header({
   title = 'folio.paon.dev',
   links = [
     { href: '/', label: 'TOP', subLabel: 'このサイトのトップへ' },
-    { href: '/about', label: 'About', subLabel: '私について' },
     { href: '/projects', label: 'Projects', subLabel: '制作実績' },
+    { href: '/profile', label: 'Profile', subLabel: '私について' },
     { href: '/contact', label: 'Contact', subLabel: 'お問い合わせ' },
   ],
 }: HeaderProps) {

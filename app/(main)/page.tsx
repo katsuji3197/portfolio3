@@ -21,7 +21,7 @@ export default function Home() {
           <h2 className="text-sm md:text-lg font-medium leading-12 text-neutral-300 h-8">
             <TypingText
               lines={['The portfolio of NAKATSUJI Motoki.']}
-              speedMs={17}
+              speedMs={10}
               startDelayMs={1100}
               showCursor={false}
             />
@@ -34,7 +34,7 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="w-full h-[120vh] sm:h-[100vh] md:h-[120vh] fixed -z-10 left-0 -top-[30vh] sm:-top-[20vh] xl:-top-[40vh] -translate-y-1/4 opacity-70">
+        <div className="w-full h-[120vh] sm:h-[100vh] md:h-[120vh] fixed -z-10 left-0 top-[calc(50vh)] sm:top-[calc(50vh)] xl:top-[calc(50vh)] -translate-y-1/2 opacity-70 [@media(min-resolution:2dppx)]:top-[calc(0vh)] [@media(min-resolution:2dppx)]:-translate-y-[60%]">
           <DNAHelix
             className="w-full h-full"
             radius={3.2}
