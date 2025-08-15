@@ -5,10 +5,10 @@ name: Lint Check
 on:
   # mainブランチへのpush時
   push:
-    branches: ["main"]
+    branches: ['main']
   # mainブランチへのプルリクエスト作成・更新時
   pull_request:
-    branches: ["main"]
+    branches: ['main']
 
 # 実行するジョブを定義
 jobs:
@@ -29,7 +29,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           # プロジェクトで使用しているNode.jsのバージョンを指定
-          node-version: "20"
+          node-version: '20'
 
       # 3. pnpmをインストールする
       - name: Install pnpm

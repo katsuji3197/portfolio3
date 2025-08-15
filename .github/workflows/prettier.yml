@@ -2,7 +2,7 @@ name: Format Check
 
 on:
   pull_request:
-    branches: ["main"]
+    branches: ['main']
 
 jobs:
   prettier:
@@ -16,7 +16,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: '20'
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
@@ -52,7 +52,14 @@ jobs:
       # Prettierがインストールされている場合のみ実行
       - name: Check Formatting
         if: steps.check-prettier.outputs.prettier-installed == 'true'
-        run: pnpm format:check
+        run: |
+          # フォーマットチェックを実行
+          if ! pnpm format:check; then
+            echo "Formatting issues found. Please run 'pnpm format' locally to fix them."
+            echo "Files that need formatting:"
+            pnpm prettier --check . --list-different || true
+            exit 1
+          fi
 
       # Prettierがインストールされていない場合はスキップ
       - name: Skip Prettier Check

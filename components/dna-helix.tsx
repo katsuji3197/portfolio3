@@ -161,7 +161,8 @@ export default function DNAHelix({
     window.addEventListener('resize', handleResize);
 
     return () => {
-      if (animationFrameIdRef.current !== null) cancelAnimationFrame(animationFrameIdRef.current);
+      if (animationFrameIdRef.current !== null)
+        cancelAnimationFrame(animationFrameIdRef.current);
       window.removeEventListener('resize', handleResize);
       geom.dispose();
       material.dispose();
@@ -191,5 +192,3 @@ export default function DNAHelix({
     />
   );
 }
-
-

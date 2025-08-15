@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from 'react';
 
 type TypingTextProps = {
   lines: string[];
@@ -17,8 +17,8 @@ export default function TypingText({
   className,
   showCursor = true,
 }: TypingTextProps) {
-  const [displayedLines, setDisplayedLines] = useState<string[]>(
-    () => lines.map(() => "")
+  const [displayedLines, setDisplayedLines] = useState<string[]>(() =>
+    lines.map(() => '')
   );
   const [isTyping, setIsTyping] = useState<boolean>(false);
 
@@ -28,22 +28,30 @@ export default function TypingText({
     let cancelled = false;
 
     async function sleep(ms: number) {
-      return new Promise((resolve) => setTimeout(resolve, ms));
+      return new Promise(resolve => setTimeout(resolve, ms));
     }
 
     async function typeAll() {
-      setDisplayedLines(normalizedLines.map(() => ""));
+      setDisplayedLines(normalizedLines.map(() => ''));
       setIsTyping(false);
       if (startDelayMs > 0) {
         await sleep(startDelayMs);
       }
       setIsTyping(true);
 
-      for (let lineIndex = 0; lineIndex < normalizedLines.length; lineIndex += 1) {
-        const currentLine = normalizedLines[lineIndex] ?? "";
-        for (let charIndex = 0; charIndex < currentLine.length; charIndex += 1) {
+      for (
+        let lineIndex = 0;
+        lineIndex < normalizedLines.length;
+        lineIndex += 1
+      ) {
+        const currentLine = normalizedLines[lineIndex] ?? '';
+        for (
+          let charIndex = 0;
+          charIndex < currentLine.length;
+          charIndex += 1
+        ) {
           if (cancelled) return;
-          setDisplayedLines((prev) => {
+          setDisplayedLines(prev => {
             const copy = [...prev];
             copy[lineIndex] = copy[lineIndex] + currentLine[charIndex];
             return copy;
@@ -86,5 +94,3 @@ export default function TypingText({
     </span>
   );
 }
-
-

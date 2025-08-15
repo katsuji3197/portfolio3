@@ -1,5 +1,5 @@
-import Link from "next/link";
-import { ReactNode } from "react";
+import Link from 'next/link';
+import { ReactNode } from 'react';
 
 interface PrimaryButtonProps {
   href: string;
@@ -7,10 +7,10 @@ interface PrimaryButtonProps {
   className?: string;
 }
 
-export default function PrimaryButton({ 
-  href, 
-  children, 
-  className = "" 
+export default function PrimaryButton({
+  href,
+  children,
+  className = '',
 }: PrimaryButtonProps) {
   return (
     <Link

@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef } from 'react';
 import {
   Scene,
   PerspectiveCamera,
@@ -16,7 +16,7 @@ import {
   Line,
   LineBasicMaterial,
   Vector3,
-} from "three";
+} from 'three';
 
 export default function NightSky() {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -31,7 +31,7 @@ export default function NightSky() {
 
     const scene = new Scene();
     scene.background = null;
-    scene.fog = new FogExp2(new Color("#0a0f1f"), 0.0004);
+    scene.fog = new FogExp2(new Color('#0a0f1f'), 0.0004);
 
     const camera = new PerspectiveCamera(70, 1, 1, 5000);
     camera.position.z = 600;
@@ -79,19 +79,19 @@ export default function NightSky() {
         let chosen = new Color(color);
         const r = Math.random();
         if (r < 0.05) {
-          chosen = new Color("#ff7f50");
+          chosen = new Color('#ff7f50');
         } else if (r < 0.1) {
-          chosen = new Color("#6495ed");
+          chosen = new Color('#6495ed');
         }
         colors[idx] = chosen.r;
         colors[idx + 1] = chosen.g;
         colors[idx + 2] = chosen.b;
       }
       geometry.setAttribute(
-        "position",
+        'position',
         new Float32BufferAttribute(positions, 3)
       );
-      geometry.setAttribute("color", new Float32BufferAttribute(colors, 3));
+      geometry.setAttribute('color', new Float32BufferAttribute(colors, 3));
 
       const material = new PointsMaterial({
         color: new Color(color),
@@ -108,9 +108,9 @@ export default function NightSky() {
       return { points, geometry, material };
     };
 
-    const layer1 = createStars(6000, "#eaf2ff", 1.8, 1100);
-    const layer2 = createStars(3600, "#d9e6ff", 2.2, 1400);
-    const layer3 = createStars(2600, "#ffffff", 2.8, 1700);
+    const layer1 = createStars(6000, '#eaf2ff', 1.8, 1100);
+    const layer2 = createStars(3600, '#d9e6ff', 2.2, 1400);
+    const layer3 = createStars(2600, '#ffffff', 2.8, 1700);
     root.add(layer1.points);
     root.add(layer2.points);
     root.add(layer3.points);
@@ -137,11 +137,11 @@ export default function NightSky() {
       // head
       const headGeometry = new BufferGeometry();
       headGeometry.setAttribute(
-        "position",
+        'position',
         new Float32BufferAttribute(new Float32Array([0, 0, 0]), 3)
       );
       const headMaterial = new PointsMaterial({
-        color: new Color("#ffffff"),
+        color: new Color('#ffffff'),
         size: 3,
         transparent: true,
         opacity: 0.0,
@@ -156,7 +156,7 @@ export default function NightSky() {
       // 初期は全て同一点
       const initialTail = new Float32Array(tailSegments * 3).fill(0);
       tailGeometry.setAttribute(
-        "position",
+        'position',
         new Float32BufferAttribute(initialTail, 3)
       );
       // 頂点カラー（減衰）でモーションブラー風の残像を表現
@@ -169,7 +169,7 @@ export default function NightSky() {
         initialColors[idx + 2] = attenuation;
       }
       tailGeometry.setAttribute(
-        "color",
+        'color',
         new Float32BufferAttribute(initialColors, 3)
       );
       const tailMaterial = new LineBasicMaterial({
@@ -245,10 +245,10 @@ export default function NightSky() {
 
     const updateTailGeometry = (star: ShootingStar, fade: number) => {
       const positionAttr = (star.tail.geometry as BufferGeometry).getAttribute(
-        "position"
+        'position'
       ) as Float32BufferAttribute;
       const colorAttr = (star.tail.geometry as BufferGeometry).getAttribute(
-        "color"
+        'color'
       ) as Float32BufferAttribute;
       for (let i = 0; i < tailSegments; i += 1) {
         const p = star.tailPositions[i];
@@ -292,7 +292,7 @@ export default function NightSky() {
       if (dt > 0) {
         const shouldSpawn = Math.random() < 0.25 * dt; // 平均4秒に1回程度
         if (shouldSpawn) {
-          const candidate = shootingStars.find((s) => !s.active);
+          const candidate = shootingStars.find(s => !s.active);
           if (candidate) {
             activateShootingStar(candidate);
           }
@@ -335,13 +335,13 @@ export default function NightSky() {
     const onResize = () => {
       setRendererSize();
     };
-    window.addEventListener("resize", onResize);
+    window.addEventListener('resize', onResize);
 
     return () => {
       if (animationFrameIdRef.current !== null) {
         cancelAnimationFrame(animationFrameIdRef.current);
       }
-      window.removeEventListener("resize", onResize);
+      window.removeEventListener('resize', onResize);
       // 流れ星の破棄
       for (const star of shootingStars) {
         if ((root as Group).children.indexOf(star.group) !== -1) {
@@ -371,7 +371,7 @@ export default function NightSky() {
       className="fixed inset-0 -z-10 pointer-events-none"
       style={{
         background:
-          "radial-gradient(1000px 600px at 50% 120%, #0b1226 0%, #070b18 35%, #050912 70%, #03060d 100%)",
+          'radial-gradient(1000px 600px at 50% 120%, #0b1226 0%, #070b18 35%, #050912 70%, #03060d 100%)',
       }}
     />
   );

@@ -14,6 +14,18 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage"
   },
+  "prettier": {
+    "semi": true,
+    "trailingComma": "es5",
+    "singleQuote": true,
+    "printWidth": 80,
+    "tabWidth": 2,
+    "useTabs": false,
+    "bracketSpacing": true,
+    "bracketSameLine": false,
+    "arrowParens": "avoid",
+    "endOfLine": "lf"
+  },
   "dependencies": {
     "framer-motion": "^12.23.12",
     "next": "15.4.6",

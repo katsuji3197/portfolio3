@@ -1,26 +1,26 @@
-import type { Metadata } from "next";
-import localFont from "next/font/local";
-import { Noto_Sans_JP } from "next/font/google";
-import "./globals.css";
-import Header from "../../components/header";
-import NightSky from "../../components/night-sky";
+import type { Metadata } from 'next';
+import localFont from 'next/font/local';
+import { Noto_Sans_JP } from 'next/font/google';
+import './globals.css';
+import Header from '../../components/header';
+import NightSky from '../../components/night-sky';
 
 const customFont = localFont({
-  src: "../../public/font.ttf",
-  variable: "--font-custom",
-  display: "swap",
+  src: '../../public/font.ttf',
+  variable: '--font-custom',
+  display: 'swap',
 });
 
 const notoSansJP = Noto_Sans_JP({
-  variable: "--font-noto-sans-jp",
-  subsets: ["latin"],
-  weight: ["400", "500", "700"],
-  display: "swap",
+  variable: '--font-noto-sans-jp',
+  subsets: ['latin'],
+  weight: ['400', '500', '700'],
+  display: 'swap',
 });
 
 export const metadata: Metadata = {
-  title: "N.Motoki Portfolio 3.0",
-  description: "The Third Portfolio of NAKATSUJI Motoki.",
+  title: 'N.Motoki Portfolio 3.0',
+  description: 'The Third Portfolio of NAKATSUJI Motoki.',
 };
 
 export default function RootLayout({

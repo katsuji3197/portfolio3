@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 
 interface HeaderProps {
   title?: string;
@@ -14,19 +14,19 @@ interface HeaderProps {
 }
 
 export default function Header({
-  title = "folio.paon.dev",
+  title = 'folio.paon.dev',
   links = [
-    { href: "/", label: "TOP", subLabel: "このサイトのトップへ" },
-    { href: "/about", label: "About", subLabel: "私について" },
-    { href: "/projects", label: "Projects", subLabel: "制作実績" },
-    { href: "/contact", label: "Contact", subLabel: "お問い合わせ" },
+    { href: '/', label: 'TOP', subLabel: 'このサイトのトップへ' },
+    { href: '/about', label: 'About', subLabel: '私について' },
+    { href: '/projects', label: 'Projects', subLabel: '制作実績' },
+    { href: '/contact', label: 'Contact', subLabel: 'お問い合わせ' },
   ],
 }: HeaderProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isHeaderVisibleAfterScroll, setIsHeaderVisibleAfterScroll] =
     useState(false);
-    const pathname = usePathname();
-    const shouldApplyScrollHide = pathname === "/";
+  const pathname = usePathname();
+  const shouldApplyScrollHide = pathname === '/';
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -44,7 +44,7 @@ export default function Header({
     if (scrollbarWidth > 0) {
       document.body.style.paddingRight = `${scrollbarWidth}px`;
     }
-    document.body.style.overflow = "hidden";
+    document.body.style.overflow = 'hidden';
 
     return () => {
       document.body.style.overflow = originalOverflow;
@@ -63,15 +63,15 @@ export default function Header({
     };
     // 初期判定
     handleScroll();
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
   }, [shouldApplyScrollHide]);
 
   const headerTranslateClass = isMenuOpen
-    ? "-translate-y-full"
+    ? '-translate-y-full'
     : isHeaderVisibleAfterScroll
-    ? "translate-y-0"
-    : "-translate-y-full";
+      ? 'translate-y-0'
+      : '-translate-y-full';
 
   return (
     <>
@@ -104,7 +104,7 @@ export default function Header({
                 <span className="sr-only">メニューを開く</span>
                 {/* ハンバーガーアイコン */}
                 <svg
-                  className={`${isMenuOpen ? "hidden" : "block"} h-6 w-6`}
+                  className={`${isMenuOpen ? 'hidden' : 'block'} h-6 w-6`}
                   xmlns="http://www.w3.org/2000/svg"
                   fill="none"
                   viewBox="0 0 24 24"
@@ -120,7 +120,7 @@ export default function Header({
                 </svg>
                 {/* 閉じるアイコン */}
                 <svg
-                  className={`${isMenuOpen ? "block" : "hidden"} h-6 w-6`}
+                  className={`${isMenuOpen ? 'block' : 'hidden'} h-6 w-6`}
                   xmlns="http://www.w3.org/2000/svg"
                   fill="none"
                   viewBox="0 0 24 24"
@@ -143,13 +143,13 @@ export default function Header({
       {/* オーバーレイ */}
       <div
         className={`fixed inset-0 bg-neutral-900/20 z-60 transition-opacity backdrop-blur-xs duration-200 ease-in-out overscroll-none ${
-          isMenuOpen ? "" : "opacity-0 pointer-events-none"
+          isMenuOpen ? '' : 'opacity-0 pointer-events-none'
         }`}
         onClick={() => setIsMenuOpen(false)}
-        onWheel={(e) => {
+        onWheel={e => {
           if (isMenuOpen) e.preventDefault();
         }}
-        onTouchMove={(e) => {
+        onTouchMove={e => {
           if (isMenuOpen) e.preventDefault();
         }}
       />
@@ -157,7 +157,7 @@ export default function Header({
       {/* 右側ドロアメニュー */}
       <div
         className={`fixed top-0 right-0 h-full w-2/3 max-w-[300px] bg-neutral-900/60 backdrop-blur-lg border-l border-neutral-500 z-70 transform transition-transform duration-300 ease-in-out ${
-          isMenuOpen ? "translate-x-0" : "translate-x-full"
+          isMenuOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
         <div className="flex flex-col h-full">
@@ -204,14 +204,16 @@ export default function Header({
                     href={link.href}
                     className={`block py-3 px-4 h-18 text-lg rounded-md font-medium background-blur-sm opacity-200 duration-300 ${
                       isCurrentPage
-                        ? "text-purple-300 cursor-default"
-                        : "text-neutral-200 hover:text-neutral-300 hover:bg-neutral-800/50 hover:border-[1px] hover:border-neutral-500"
+                        ? 'text-purple-300 cursor-default'
+                        : 'text-neutral-200 hover:text-neutral-300 hover:bg-neutral-800/50 hover:border-[1px] hover:border-neutral-500'
                     }`}
                     onClick={() => setIsMenuOpen(false)}
                   >
                     <p>{link.label}</p>
                     <p className="text-sm text-neutral-400">
-                      {isCurrentPage ? `現在${link.label}にいます。` : link.subLabel}
+                      {isCurrentPage
+                        ? `現在${link.label}にいます。`
+                        : link.subLabel}
                     </p>
                   </Link>
                 );
