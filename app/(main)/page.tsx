@@ -1,9 +1,9 @@
-import DNAHelix from "@/components/dna-helix";
-import ScrollButton from "@/components/scroll-button";
-import ProjectsCarousel from "@/components/projects-carousel";
-import { PROJECTS } from "@/data/projects";
-import TypingText from "@/components/typing-text";
-import PrimaryButton from "@/components/primary-button";
+import DNAHelix from '@/components/dna-helix';
+import ScrollButton from '@/components/scroll-button';
+import ProjectsCarousel from '@/components/projects-carousel';
+import { PROJECTS } from '@/data/projects';
+import TypingText from '@/components/typing-text';
+import PrimaryButton from '@/components/primary-button';
 
 export default function Home() {
   return (
@@ -12,7 +12,7 @@ export default function Home() {
         <div className="pb-12 md:pb-0 flex flex-col items-start justify-center gap-6">
           <h1 className="text-2xl md:text-4xl font-bold leading-12 h-24">
             <TypingText
-              lines={["Weaving a Kinder", "Digital World."]}
+              lines={['Weaving a Kinder', 'Digital World.']}
               speedMs={20}
               startDelayMs={150}
               showCursor={false}
@@ -20,7 +20,7 @@ export default function Home() {
           </h1>
           <h2 className="text-sm md:text-lg font-medium leading-12 text-neutral-300 h-8">
             <TypingText
-              lines={["The portfolio of NAKATSUJI Motoki."]}
+              lines={['The portfolio of NAKATSUJI Motoki.']}
               speedMs={17}
               startDelayMs={1100}
               showCursor={false}
@@ -62,9 +62,7 @@ export default function Home() {
                 制作実績
               </p>
             </div>
-            <PrimaryButton href="/projects">
-              すべて見る
-            </PrimaryButton>
+            <PrimaryButton href="/projects">すべて見る</PrimaryButton>
           </div>
           <div className="px-4 sm:px-24 xl:px-48">
             <ProjectsCarousel projects={PROJECTS} />

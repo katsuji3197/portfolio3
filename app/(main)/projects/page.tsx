@@ -1,6 +1,6 @@
-import Link from "next/link";
-import { PROJECTS } from "@/data/projects";
-import Image from "next/image";
+import Link from 'next/link';
+import { PROJECTS } from '@/data/projects';
+import Image from 'next/image';
 
 export default function ProjectsIndexPage() {
   return (
@@ -10,7 +10,7 @@ export default function ProjectsIndexPage() {
         <p className="text-sm text-neutral-400">製作実績</p>
       </div>
       <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
-        {PROJECTS.map((p) => (
+        {PROJECTS.map(p => (
           <Link
             key={p.id}
             href={`/projects/${p.id}`}
@@ -34,15 +34,15 @@ export default function ProjectsIndexPage() {
                 </span>
               </div>
               <div className="flex flex-wrap gap-1 pt-2">
-                  {p.tags.map((tag) => (
-                    <span
-                      key={`${p.id}-${tag}`}
-                      className="text-xs text-neutral-300 bg-neutral-800/60 border border-neutral-600 rounded px-2 py-0.5"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
+                {p.tags.map(tag => (
+                  <span
+                    key={`${p.id}-${tag}`}
+                    className="text-xs text-neutral-300 bg-neutral-800/60 border border-neutral-600 rounded px-2 py-0.5"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
               <p className="text-sm text-neutral-300 line-clamp-2 mt-2">
                 {p.description}
               </p>

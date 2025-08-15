@@ -1,12 +1,12 @@
-import Image from "next/image";
-import { notFound } from "next/navigation";
-import { PROJECTS } from "@/data/projects";
+import Image from 'next/image';
+import { notFound } from 'next/navigation';
+import { PROJECTS } from '@/data/projects';
 
 type PageProps = { params: Promise<{ id: string }> };
 
 export default async function ProjectDetailPage({ params }: PageProps) {
   const { id } = await params;
-  const project = PROJECTS.find((p) => p.id === id);
+  const project = PROJECTS.find(p => p.id === id);
   if (!project) return notFound();
 
   return (
@@ -28,7 +28,7 @@ export default async function ProjectDetailPage({ params }: PageProps) {
           </div>
         )}
         <div className="flex gap-2 flex-wrap">
-          {project.tags.map((tag) => (
+          {project.tags.map(tag => (
             <span
               key={`${project.id}-detail-${tag}`}
               className="text-xs text-neutral-200 bg-neutral-800/60 border border-neutral-600 rounded px-2 py-0.5"

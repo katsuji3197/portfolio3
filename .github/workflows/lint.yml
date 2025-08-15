@@ -1,0 +1,64 @@
+# ワークフローの名前
+name: Lint Check
+
+# このワークフローが実行されるタイミングを指定
+on:
+  # mainブランチへのpush時
+  push:
+    branches: ['main']
+  # mainブランチへのプルリクエスト作成・更新時
+  pull_request:
+    branches: ['main']
+
+# 実行するジョブを定義
+jobs:
+  lint:
+    # ジョブの名前
+    name: Run ESLint
+    # 実行する仮想環境の種類
+    runs-on: ubuntu-latest
+
+    # ジョブのステップを定義
+    steps:
+      # 1. リポジトリのコードをチェックアウトする
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # 2. Node.js環境をセットアップする
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          # プロジェクトで使用しているNode.jsのバージョンを指定
+          node-version: '20'
+
+      # 3. pnpmをインストールする
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest
+
+      # 4. pnpmキャッシュをセットアップする
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      # 5. 依存パッケージをインストールする
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      # 6. TypeScriptの型チェックを実行する
+      - name: Type Check
+        run: pnpm type-check
+
+      # 7. Lintチェックを実行する
+      - name: Run Lint
+        run: pnpm lint
