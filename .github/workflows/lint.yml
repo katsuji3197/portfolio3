@@ -5,10 +5,10 @@ name: Lint Check
 on:
   # mainブランチへのpush時
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   # mainブランチへのプルリクエスト作成・更新時
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 # 実行するジョブを定義
 jobs:
@@ -29,14 +29,14 @@ jobs:
         uses: actions/setup-node@v4
         with:
           # プロジェクトで使用しているNode.jsのバージョンを指定
-          node-version: '20'
+          node-version: "20"
           # npmのキャッシュを有効にし、インストールを高速化
-          cache: 'npm'
+          cache: "pnpm"
 
       # 3. 依存パッケージをインストールする
       - name: Install Dependencies
-        run: npm ci
+        run: pnpm ci
 
       # 4. Lintチェックを実行する
       - name: Run Lint
-        run: npm run lint
+        run: pnpm run lint
