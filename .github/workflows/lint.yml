@@ -30,17 +30,35 @@ jobs:
         with:
           # プロジェクトで使用しているNode.jsのバージョンを指定
           node-version: "20"
-          # pnpmのキャッシュを有効にし、インストールを高速化
-          cache: "pnpm"
 
-      # 3. 依存パッケージをインストールする
+      # 3. pnpmをインストールする
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest
+
+      # 4. pnpmキャッシュをセットアップする
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      # 5. 依存パッケージをインストールする
       - name: Install Dependencies
         run: pnpm ci
 
-      # 4. TypeScriptの型チェックを実行する
+      # 6. TypeScriptの型チェックを実行する
       - name: Type Check
-        run: pnpm tsc --noEmit
+        run: pnpm type-check
 
-      # 5. Lintチェックを実行する
+      # 7. Lintチェックを実行する
       - name: Run Lint
         run: pnpm lint
