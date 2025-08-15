@@ -1,0 +1,27 @@
+name: Format Check
+
+on:
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  prettier:
+    name: Run Prettier Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install Dependencies
+        run: pnpm ci
+      
+      # フォーマットが正しいかチェック
+      - name: Check Formatting
+        run: pnpm run format:check # package.jsonに "format:check": "prettier --check ." を追加
