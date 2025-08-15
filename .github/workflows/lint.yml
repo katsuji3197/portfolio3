@@ -53,7 +53,7 @@ jobs:
 
       # 5. 依存パッケージをインストールする
       - name: Install Dependencies
-        run: pnpm ci
+        run: pnpm install --frozen-lockfile
 
       # 6. TypeScriptの型チェックを実行する
       - name: Type Check
