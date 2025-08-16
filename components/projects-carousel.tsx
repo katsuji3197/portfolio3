@@ -37,7 +37,7 @@ export default function ProjectsCarousel({
       <button
         aria-label="左へスクロール"
         onClick={slidePrev}
-        className="absolute left-2 hidden md:block -bottom-16 top-auto translate-y-0 md:bottom-auto h-12 w-12 md:top-1/2 md:-translate-y-1/2 md:-left-12 z-10 md:h-8 md:w-8 rounded-full bg-neutral-900/60 border border-neutral-500 text-neutral-200 hover:bg-neutral-800/80 backdrop-blur-md"
+        className="absolute left-2 hidden md:block -bottom-16 top-auto cursor-pointer translate-y-0 md:bottom-auto h-12 w-12 md:top-1/2 md:-translate-y-1/2 md:-left-12 z-10 md:h-8 md:w-8 rounded-full bg-neutral-900/60 border border-neutral-500 text-neutral-200 hover:bg-neutral-800/80 backdrop-blur-md"
       >
         <span aria-hidden className="text-neutral-400 text-2xl md:text-lg">
           ←
@@ -47,7 +47,7 @@ export default function ProjectsCarousel({
       <button
         aria-label="右へスクロール"
         onClick={slideNext}
-        className="absolute left-18 -bottom-16 hidden md:block top-auto translate-y-0 md:left-auto md:-right-12 md:bottom-auto md:top-1/2 md:-translate-y-1/2 z-10 h-12 w-12 md:h-8 md:w-8 rounded-full bg-neutral-900/60 border border-neutral-500 text-neutral-200 hover:bg-neutral-800/80 backdrop-blur-md"
+        className="absolute left-18 -bottom-16 hidden md:block top-auto cursor-pointer translate-y-0 md:left-auto md:-right-12 md:bottom-auto md:top-1/2 md:-translate-y-1/2 z-10 h-12 w-12 md:h-8 md:w-8 rounded-full bg-neutral-900/60 border border-neutral-500 text-neutral-200 hover:bg-neutral-800/80 backdrop-blur-md"
       >
         <span aria-hidden className="text-neutral-400 text-2xl md:text-lg">
           →
