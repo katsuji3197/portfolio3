@@ -17,6 +17,67 @@ body {
   font-family: var(--font-custom), Arial, Helvetica, sans-serif;
 }
 
+/* カスタムカーソルのスタイル */
+.cursor-trail {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  z-index: 9999;
+  pointer-events: none;
+  /* 枠だけのデザイン */
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  transition: transform 0.2s ease-out;
+  /* 流れ星のような光の効果 */
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+  /* md以下の画面サイズでは非表示 */
+  display: none;
+}
+
+/* md以上の画面サイズでのみ表示 */
+@media (min-width: 768px) {
+  .cursor-trail {
+    display: block;
+  }
+}
+
+/* ホバー可能な要素のカーソル設定（カスタムカーソル有効時のみ適用） */
+.cursor-trail ~ * a,
+.cursor-trail ~ * button,
+.cursor-trail ~ * [data-hoverable='true'] {
+  cursor: none !important;
+}
+
+/* クリック時の波動エフェクト */
+.cursor-ripple {
+  position: fixed;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: transparent;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  pointer-events: none;
+  z-index: 9998;
+  transform: translate(-50%, -50%);
+  animation: ripple-animation 1s ease-out forwards;
+}
+
+@keyframes ripple-animation {
+  0% {
+    width: 0;
+    height: 0;
+    opacity: 1;
+  }
+  100% {
+    width: 200px;
+    height: 200px;
+    opacity: 0;
+  }
+}
+
 @layer utilities {
   .scrollbar-hide {
     -ms-overflow-style: none; /* IE and Edge */

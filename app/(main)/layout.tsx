@@ -1,9 +1,12 @@
 import type { Metadata } from 'next';
 import localFont from 'next/font/local';
 import { Noto_Sans_JP } from 'next/font/google';
+import { Analytics } from '@vercel/analytics/react';
 import './globals.css';
 import Header from '../../components/header';
 import NightSky from '../../components/night-sky';
+import CustomCursor from '../../components/custom-cursor';
+import { CursorProvider } from '../../contexts/cursor-context';
 
 const customFont = localFont({
   src: '../../public/font.ttf',
@@ -33,9 +36,13 @@ export default function RootLayout({
       <body
         className={`${customFont.variable} ${notoSansJP.variable} antialiased`}
       >
-        <Header />
-        <NightSky />
-        <main className="relative z-10">{children}</main>
+        <CursorProvider>
+          <CustomCursor />
+          <Header />
+          <NightSky />
+          <main className="relative z-10">{children}</main>
+          <Analytics />
+        </CursorProvider>
       </body>
     </html>
   );
