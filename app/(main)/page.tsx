@@ -108,13 +108,14 @@ export default function Home() {
                   </p>
                 </div>
                 <p className="text-xs md:text-md text-neutral-500 font-medium">
-                  UI Designer / Frontend Developer
+                  UI Designer / <br className="md:hidden" /> Frontend Developer
                 </p>
                 <div className="h-[1px] w-full pr-2 bg-neutral-700" />
                 <ul className="flex flex-col gap-2">
-                  <li className="flex flex-col gap-2 text-neutral-400 text-sm md:text-md">
+                  <li className="flex flex-col gap-2 text-neutral-400 text-xs md:text-sm">
                     <ul>
-                      金沢工業大学 情報フロンティア学部
+                      金沢工業大学 <br className="md:hidden" />{' '}
+                      情報フロンティア学部
                       <br /> メディア情報学科 4年
                     </ul>
                   </li>

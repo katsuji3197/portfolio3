@@ -198,12 +198,12 @@ export default function NightSky() {
     };
     // --- ここまで天の川の生成 ---
 
-    const layer1 = createStars(6000, '#eaf2ff', 1.8, 1100);
-    const layer2 = createStars(3600, '#d9e6ff', 2.2, 1400);
-    const layer3 = createStars(2600, '#ffffff', 2.8, 1700);
+    const layer1 = createStars(7000, '#eaf2ff', 2.0, 950);
+    const layer2 = createStars(5600, '#d9e6ff', 3.0, 1400);
+    const layer3 = createStars(4600, '#ffffff', 4.0, 1700);
 
     // 天の川を生成してシーンに追加
-    const milkyWay = createMilkyWay(32000, '#ffffff', 1.2);
+    const milkyWay = createMilkyWay(32000, '#ffffff', 1.0);
     // 天の川を斜めに傾ける
     milkyWay.points.rotation.x = Math.PI / 6;
     milkyWay.points.rotation.z = -Math.PI / 6;
@@ -242,7 +242,7 @@ export default function NightSky() {
         color: new Color('#a2b8ff'),
         size: 2.5,
         transparent: true,
-        opacity: 0.8,
+        opacity: 0.4,
         depthWrite: false,
         blending: AdditiveBlending,
         sizeAttenuation: true,
@@ -273,7 +273,7 @@ export default function NightSky() {
       const tailMaterial = new LineBasicMaterial({
         color: 0xa2b8ff,
         transparent: true,
-        opacity: 0.0,
+        opacity: 0.1,
         blending: AdditiveBlending,
         vertexColors: true,
       });
@@ -310,7 +310,7 @@ export default function NightSky() {
       star.age = 0;
       star.life = 8 + Math.random() * 41;
       star.active = true;
-      star.headMaterial.opacity = 0.9;
+      star.headMaterial.opacity = 0.8;
       star.tailMaterial.opacity = 0.7;
 
       star.tailPositions.forEach(p => p.set(0, 0, 0));
@@ -323,8 +323,8 @@ export default function NightSky() {
 
     const deactivateShootingStar = (star: ShootingStar) => {
       star.active = false;
-      star.headMaterial.opacity = 0.0;
-      star.tailMaterial.opacity = 0.0;
+      star.headMaterial.opacity = 0.2;
+      star.tailMaterial.opacity = 0.2;
       if (scene.children.indexOf(star.group) !== -1) {
         scene.remove(star.group);
       }

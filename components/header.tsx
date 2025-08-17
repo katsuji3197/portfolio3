@@ -374,7 +374,7 @@ export default function Header({
 
       {/* 右側ドロアメニュー */}
       <div
-        className={`fixed top-0 right-0 h-full w-2/3 max-w-[300px] bg-neutral-900/10 border-l border-neutral-500 z-70 transform transition-transform duration-300 ease-in-out ${
+        className={`fixed top-0 right-0 h-full w-2/3 max-w-[300px] bg-neutral-900/70 backdrop-blur-sm border-l border-neutral-500 z-70 transform transition-transform duration-300 ease-in-out ${
           isMenuOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
@@ -383,7 +383,7 @@ export default function Header({
           <div className="flex justify-between items-center px-4 pt-8">
             <Link
               href="/"
-              className="text-2xl font-bold text-neutral-200 hover:text-neutral-400 transition-colors pl-4"
+              className="text-xl font-bold text-neutral-200 hover:text-neutral-400 transition-colors pl-4"
             >
               {title}
             </Link>
@@ -425,7 +425,7 @@ export default function Header({
                     onClick={() => setIsMenuOpen(false)}
                   >
                     <p>{link.label}</p>
-                    <p className="text-sm text-neutral-400">
+                    <p className="text-xs text-neutral-400">
                       {isCurrentPage ? `現在閲覧中です。` : link.subLabel}
                     </p>
                   </Link>
