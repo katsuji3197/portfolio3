@@ -240,7 +240,7 @@ export default function NightSky() {
       );
       const headMaterial = new PointsMaterial({
         color: new Color('#a2b8ff'),
-        size: 2.5,
+        size: 2.0,
         transparent: true,
         opacity: 0.4,
         depthWrite: false,
@@ -369,7 +369,7 @@ export default function NightSky() {
       layer1.points.rotation.y += 0.0003;
       layer2.points.rotation.y += 0.0001;
       layer3.points.rotation.y += 0.00005;
-      milkyWay.points.rotation.y += 0.00008; // 天の川もゆっくり回転
+      milkyWay.points.rotation.x += 0.00008; // 天の川もゆっくり回転
 
       // カメラのゆるいドリフト
       camera.position.x = Math.sin(elapsed * 0.15) * 20;
