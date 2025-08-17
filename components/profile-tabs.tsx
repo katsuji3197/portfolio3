@@ -3,8 +3,23 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import TimelineHome from './timeline-home';
+import Image from 'next/image';
 
 type TabType = 'comment' | 'skills' | 'history';
+
+// スキルデータの型定義
+type SkillItem = {
+  name: string;
+  icon: string;
+  alt: string;
+};
+
+type SkillCategory = {
+  title: string;
+  items: SkillItem[];
+  gridCols?: string;
+  gap?: string;
+};
 
 export default function ProfileTabs() {
   const [activeTab, setActiveTab] = useState<TabType>('comment');
@@ -27,96 +42,119 @@ export default function ProfileTabs() {
     { id: 'history' as TabType, label: 'History', jpLabel: '履歴' },
   ];
 
+  // スキルデータの配列
+  const skillsData: SkillCategory[] = [
+    {
+      title: 'デザイン',
+      items: [
+        { name: 'Figma', icon: '/icons/figma.svg', alt: 'Figma' },
+        {
+          name: 'Illustrator',
+          icon: '/icons/illustrator.svg',
+          alt: 'Illustrator',
+        },
+      ],
+      gridCols: 'grid-cols-2',
+      gap: 'gap-2',
+    },
+    {
+      title: '言語',
+      items: [
+        {
+          name: 'Typescript',
+          icon: '/icons/typescript.svg',
+          alt: 'Typescript',
+        },
+        { name: 'HTML', icon: '/icons/html.svg', alt: 'HTML' },
+        { name: 'CSS', icon: '/icons/css.svg', alt: 'CSS' },
+        { name: 'Python', icon: '/icons/python.svg', alt: 'Python' },
+        { name: 'C', icon: '/icons/clang.svg', alt: 'C' },
+      ],
+      gridCols: 'grid-cols-2',
+      gap: 'gap-4',
+    },
+    {
+      title: '技術',
+      items: [
+        { name: 'GitHub', icon: '/icons/github.svg', alt: 'GitHub' },
+        { name: 'Next.js', icon: '/icons/nextjs.svg', alt: 'Next.js' },
+        { name: 'Vercel', icon: '/icons/vercel.svg', alt: 'Vercel' },
+        { name: 'Tailwind', icon: '/icons/tailwind.svg', alt: 'Tailwind' },
+      ],
+      gridCols: 'grid-cols-2',
+      gap: 'gap-2',
+    },
+    {
+      title: 'その他ツール',
+      items: [
+        { name: 'Cursor', icon: '/icons/cursor.svg', alt: 'Cursor' },
+        { name: 'Gemini', icon: '/icons/gemini.svg', alt: 'Gemini' },
+        { name: 'Notion', icon: '/icons/notion.svg', alt: 'Notion' },
+        { name: 'Shell', icon: '/icons/shell.svg', alt: 'Shell' },
+      ],
+      gridCols: 'grid-cols-2',
+      gap: 'gap-2',
+    },
+  ];
+
   const renderTabContent = () => {
     switch (activeTab) {
       case 'comment':
         return (
-          <div className="w-max text-start flex flex-col items-start gap-2 text-sm leading-relaxed">
-            <p>お越しいただきありがとうございます。</p>
-            <p>コメント</p>
-            <p>コメント</p>
+          <div className="text-xs md:text-sm w-full text-neutral-300 lg:w-[110%] text-start flex flex-col items-start leading-relaxed tracking-wider">
+            <p>ご覧いただきありがとうございます。</p>
+            <br />
+            <p>
+              飾りすぎない、わかりやすさとカッコよさの両立したデザインが好きです。
+            </p>
+            <p>
+              製作を進める際は、使いやすさを第一に考えつつ、要望に合わせた雰囲気が出せるよう努めています。
+            </p>
+            <br />
+            <p>
+              技術もデザインも紙一重。技術はデザインであり、デザインは技術です。
+            </p>
+            <p>
+              どちらも人に寄り添い、ユーザーの悩みや様々な問題を解決することも、感動を与えることもできる。
+            </p>
+            <p>こういった点で、両者に大きな違いはありません。</p>
+            <p>そのため私は、両者の境界を持たないようにしています。</p>
+            <br />
+            <p>まだまだ経験が浅いものの、様々な経験を積みながら、</p>
+            <p>さらなるスキルを磨いていきたいと思っています。</p>
+            <br />
+            <p>何か私にできることがありましたら、お気軽にご相談ください。</p>
           </div>
         );
       case 'skills':
         return (
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-lg font-medium text-neutral-200 mb-3">
-                デザイン
-              </h3>
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
-                  <span>Figma</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
-                  <span>Adobe XD</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
-                  <span>Photoshop</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
-                  <span>Illustrator</span>
-                </div>
-              </div>
-            </div>
-            <div>
-              <h3 className="text-lg font-medium text-neutral-200 mb-3">
-                フロントエンド
-              </h3>
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                  <span>React</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                  <span>Next.js</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                  <span>TypeScript</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                  <span>Tailwind CSS</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                  <span>HTML/CSS</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                  <span>JavaScript</span>
+          <div className="space-y-6 flex flex-col lg:grid grid-cols-2 gap-4 lg:gap-12">
+            {skillsData.map((category, categoryIndex) => (
+              <div key={categoryIndex}>
+                <h3 className="text-mg font-medium text-neutral-200 mb-3 border-b border-neutral-700 pb-2">
+                  {category.title}
+                </h3>
+                <div
+                  className={`grid ${category.gridCols} ${category.gap} text-sm`}
+                >
+                  {category.items.map((item, itemIndex) => (
+                    <div
+                      key={itemIndex}
+                      className="flex items-center gap-2 w-32"
+                    >
+                      <Image
+                        src={item.icon}
+                        alt={item.alt}
+                        width={20}
+                        height={20}
+                        className="opacity-70"
+                      />
+                      <span>{item.name}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
-            </div>
-            <div>
-              <h3 className="text-lg font-medium text-neutral-200 mb-3">
-                その他
-              </h3>
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-purple-400 rounded-full"></div>
-                  <span>Git</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-purple-400 rounded-full"></div>
-                  <span>GitHub</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-purple-400 rounded-full"></div>
-                  <span>Vercel</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-purple-400 rounded-full"></div>
-                  <span>Netlify</span>
-                </div>
-              </div>
-            </div>
+            ))}
           </div>
         );
       case 'history':
@@ -136,8 +174,8 @@ export default function ProfileTabs() {
             onClick={() => setActiveTab(tab.id)}
             className={`relative px-4 py-2 text-sm font-medium transition-colors w-1/3 md:w-32 duration-200 ${
               activeTab === tab.id
-                ? 'text-neutral-200'
-                : 'text-neutral-400 hover:text-neutral-300'
+                ? 'text-neutral-200 cursor-none'
+                : 'text-neutral-400 hover:text-neutral-300 cursor-pointer'
             }`}
           >
             <div className="flex flex-col items-center">
