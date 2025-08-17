@@ -44,7 +44,7 @@ export const submitFormResponse = async (
       }
     });
 
-    const response = await fetch(formUrl, {
+    await fetch(formUrl, {
       method: 'POST',
       body: formData,
       mode: 'no-cors',

@@ -1,12 +1,21 @@
 // Googleフォームの構造から質問IDを取得するユーティリティ
 
-export const extractQuestionIds = (formStructure: any) => {
+export const extractQuestionIds = (formStructure: unknown) => {
   const questionIds: { [key: string]: string } = {};
 
-  if (formStructure.items) {
-    formStructure.items.forEach((item: any) => {
-      if (item.questionItem) {
-        const question = item.questionItem.question;
+  if (
+    formStructure &&
+    typeof formStructure === 'object' &&
+    'items' in formStructure
+  ) {
+    (formStructure as { items: unknown[] }).items.forEach((item: unknown) => {
+      if (item && typeof item === 'object' && 'questionItem' in item) {
+        const questionItem = (
+          item as {
+            questionItem: { question: { questionId: string; title?: string } };
+          }
+        ).questionItem;
+        const question = questionItem.question;
         const questionId = question.questionId;
 
         // 質問のタイトルから適切なキーを決定
@@ -29,21 +38,40 @@ export const extractQuestionIds = (formStructure: any) => {
 };
 
 // フォーム構造をコンソールに出力（デバッグ用）
-export const debugFormStructure = (formStructure: any) => {
+export const debugFormStructure = (formStructure: unknown) => {
   console.log('=== Google Form Structure ===');
-  console.log('Form ID:', formStructure.formId);
-  console.log('Form Title:', formStructure.info?.documentTitle);
 
-  if (formStructure.items) {
-    console.log('\n=== Questions ===');
-    formStructure.items.forEach((item: any, index: number) => {
-      if (item.questionItem) {
-        const question = item.questionItem.question;
-        console.log(`${index + 1}. Question ID: ${question.questionId}`);
-        console.log(`   Title: ${question.title}`);
-        console.log(`   Type: ${question.questionType}`);
-        console.log('---');
-      }
-    });
+  if (formStructure && typeof formStructure === 'object') {
+    const structure = formStructure as {
+      formId?: string;
+      info?: { documentTitle?: string };
+      items?: unknown[];
+    };
+    console.log('Form ID:', structure.formId);
+    console.log('Form Title:', structure.info?.documentTitle);
+
+    if (structure.items) {
+      console.log('\n=== Questions ===');
+      structure.items.forEach((item: unknown, index: number) => {
+        if (item && typeof item === 'object' && 'questionItem' in item) {
+          const questionItem = (
+            item as {
+              questionItem: {
+                question: {
+                  questionId: string;
+                  title?: string;
+                  questionType?: string;
+                };
+              };
+            }
+          ).questionItem;
+          const question = questionItem.question;
+          console.log(`${index + 1}. Question ID: ${question.questionId}`);
+          console.log(`   Title: ${question.title}`);
+          console.log(`   Type: ${question.questionType}`);
+          console.log('---');
+        }
+      });
+    }
   }
 };

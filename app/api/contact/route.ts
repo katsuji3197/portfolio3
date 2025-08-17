@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
       success: true,
       message: 'お問い合わせを送信しました',
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: '送信に失敗しました。もう一度お試しください。' },
       { status: 500 }

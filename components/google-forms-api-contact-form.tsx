@@ -141,7 +141,7 @@ export default function GoogleFormsAPIContactForm() {
         setSubmitStatus('error');
         setErrors({ general: result.error || '送信に失敗しました' });
       }
-    } catch (error) {
+    } catch {
       setSubmitStatus('error');
       setErrors({ general: 'ネットワークエラーが発生しました' });
     } finally {
