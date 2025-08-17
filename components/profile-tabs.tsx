@@ -131,7 +131,7 @@ export default function ProfileTabs() {
           <div className="space-y-6 flex flex-col lg:grid grid-cols-2 gap-4 lg:gap-12">
             {skillsData.map((category, categoryIndex) => (
               <div key={categoryIndex}>
-                <h3 className="text-mg font-medium text-neutral-200 mb-3 border-b border-neutral-700 pb-2">
+                <h3 className="text-md font-medium text-neutral-200 mb-3 border-b border-neutral-700 pb-2">
                   {category.title}
                 </h3>
                 <div
