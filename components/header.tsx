@@ -296,7 +296,7 @@ export default function Header({
       <header
         className={`fixed top-0 left-0 right-0 z-50 bg-neutral-900/40 backdrop-blur-xs border-b-[1px] border-neutral-500 transform transition-transform duration-300 ${headerTranslateClass}`}
       >
-        <div className="pr-8 pl-4 sm:pl-24 xl:pl-48">
+        <div className="pr-8 pl-8">
           <div className="flex justify-between items-center h-16">
             {/* 左側のタイトル */}
             <div className="flex-shrink-0 flex items-center gap-2 justify-center">

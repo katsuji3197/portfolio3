@@ -1,12 +1,11 @@
 'use client';
 
-import Image from 'next/image';
-import Link from 'next/link';
 import { useRef } from 'react';
 import type { Project } from '@/data/projects';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import type { Swiper as SwiperClass } from 'swiper';
 import { Autoplay } from 'swiper/modules';
+import ProjectCard from './project-card';
 import 'swiper/css';
 
 type ProjectsCarouselProps = {
@@ -76,43 +75,13 @@ export default function ProjectsCarousel({
       >
         {projects.map(project => (
           <SwiperSlide key={project.id} className="h-screen">
-            <Link
-              href={`/projects/${project.id}`}
-              className="block h-full bg-neutral-900/30 border border-neutral-600 rounded-xl overflow-hidden hover:border-neutral-400 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500/60"
-            >
-              <div className="relative h-48 sm:h-96 md:h-72 w-full bg-neutral-800">
-                <Image
-                  src={project.imageSrc}
-                  alt={project.title}
-                  fill
-                  sizes="(max-width: 640px) 90vw, 320px"
-                  className="object-contain"
-                />
-              </div>
-              <div className="p-4 flex flex-col gap-2 h-40 justify-center">
-                <div className="flex items-center justify-between gap-2">
-                  <h3 className="text-lg font-semibold text-neutral-100 line-clamp-1">
-                    {project.title}
-                  </h3>
-                  <span className="text-xs text-neutral-400 whitespace-nowrap">
-                    {project.createdAt}
-                  </span>
-                </div>
-                <div className="flex flex-wrap gap-1">
-                  {project.tags.map(tag => (
-                    <span
-                      key={`${project.id}-${tag}`}
-                      className="text-xs text-neutral-300 bg-neutral-800/60 border border-neutral-600 rounded px-2 py-0.5"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-                <p className="text-sm text-neutral-300 line-clamp-3">
-                  {project.description}
-                </p>
-              </div>
-            </Link>
+            <ProjectCard
+              project={project}
+              className="h-full"
+              imageClassName="h-48 sm:h-96 md:h-72"
+              containerClassName="h-40 justify-center"
+              descriptionLines={3}
+            />
           </SwiperSlide>
         ))}
       </Swiper>

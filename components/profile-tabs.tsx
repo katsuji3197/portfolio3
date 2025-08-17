@@ -60,12 +60,12 @@ export default function ProfileTabs() {
     {
       title: '言語',
       items: [
+        { name: 'HTML', icon: '/icons/html.svg', alt: 'HTML' },
         {
           name: 'Typescript',
           icon: '/icons/typescript.svg',
           alt: 'Typescript',
         },
-        { name: 'HTML', icon: '/icons/html.svg', alt: 'HTML' },
         { name: 'CSS', icon: '/icons/css.svg', alt: 'CSS' },
         { name: 'Python', icon: '/icons/python.svg', alt: 'Python' },
         { name: 'C', icon: '/icons/clang.svg', alt: 'C' },
@@ -128,20 +128,17 @@ export default function ProfileTabs() {
         );
       case 'skills':
         return (
-          <div className="space-y-6 flex flex-col lg:grid grid-cols-2 gap-4 lg:gap-12">
+          <div className="flex flex-col lg:grid grid-cols-2 gap-12">
             {skillsData.map((category, categoryIndex) => (
               <div key={categoryIndex}>
-                <h3 className="text-md font-medium text-neutral-200 mb-3 border-b border-neutral-700 pb-2">
+                <h3 className="text-md font-medium text-neutral-500 mb-3 w-[280px] border-b border-neutral-700 pb-2">
                   {category.title}
                 </h3>
                 <div
                   className={`grid ${category.gridCols} ${category.gap} text-sm`}
                 >
                   {category.items.map((item, itemIndex) => (
-                    <div
-                      key={itemIndex}
-                      className="flex items-center gap-2 w-32"
-                    >
+                    <div key={itemIndex} className="flex items-center gap-2">
                       <Image
                         src={item.icon}
                         alt={item.alt}
@@ -149,7 +146,7 @@ export default function ProfileTabs() {
                         height={20}
                         className="opacity-70"
                       />
-                      <span>{item.name}</span>
+                      <span className="text-sm lg:text-base">{item.name}</span>
                     </div>
                   ))}
                 </div>
