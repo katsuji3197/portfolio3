@@ -17,7 +17,7 @@ export default function MusicConsentPopup({
   const pathname = usePathname();
   const [isVisible, setIsVisible] = useState(true);
   const [isFadingOut, setIsFadingOut] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(5);
+  const [timeLeft, setTimeLeft] = useState(8);
 
   useEffect(() => {
     const timer = setInterval(() => {

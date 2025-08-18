@@ -28,6 +28,7 @@ export default function ProjectCard({
           alt={project.title}
           fill
           sizes="(max-width: 640px) 90vw, 320px"
+          quality={75}
           className="object-contain"
         />
       </div>

@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import { PROJECTS } from '@/data/projects';
 import ProjectCard from '@/components/project-card';
 
@@ -21,3 +22,8 @@ export default function ProjectsIndexPage() {
     </div>
   );
 }
+
+export const metadata: Metadata = {
+  title: 'Projects — N.Motoki',
+  description: '制作実績の一覧ページ。これまでのプロジェクトを紹介します。',
+};

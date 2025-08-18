@@ -7,6 +7,7 @@ import Header from '../../components/header';
 import NightSky from '../../components/night-sky';
 import CustomCursor from '../../components/custom-cursor';
 import { CursorProvider } from '../../contexts/cursor-context';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 
 const customFont = localFont({
   src: '../../public/font.ttf',
@@ -36,12 +37,13 @@ export default function RootLayout({
       <body
         className={`${customFont.variable} ${notoSansJP.variable} antialiased`}
       >
+        <SpeedInsights />
+        <Analytics />
         <CursorProvider>
           <CustomCursor />
           <Header />
           <NightSky />
           <main className="relative z-10">{children}</main>
-          <Analytics />
         </CursorProvider>
       </body>
     </html>

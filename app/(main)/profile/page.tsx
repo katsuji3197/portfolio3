@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import ProfileTabs from '@/components/profile-tabs';
 import Image from 'next/image';
 
@@ -56,3 +57,8 @@ export default function Profile() {
     </div>
   );
 }
+
+export const metadata: Metadata = {
+  title: 'Profile — N.Motoki',
+  description: '中辻基希（NAKATSUJI Motoki）の経歴・スキル・活動について。',
+};

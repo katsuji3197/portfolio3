@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import DNAHelix from '@/components/dna-helix';
 import ScrollButton from '@/components/scroll-button';
 import ProjectsCarousel from '@/components/projects-carousel';
@@ -96,6 +97,8 @@ export default function Home() {
                 alt="profile"
                 width={1000}
                 height={1000}
+                quality={80}
+                priority
                 className="max-w-[20vh] md:max-w-none w-36 h-auto md:w-full md:h-full object-cover rounded-lg m-3 opacity-80 shadow-2xl"
               />
               <div className="flex flex-col gap-2 w-full md:min-w-64">
@@ -131,3 +134,9 @@ export default function Home() {
     </div>
   );
 }
+
+export const metadata: Metadata = {
+  title: 'HOME - N.Motoki Portfolio 3.0',
+  description:
+    'NAKATSUJI Motoki のポートフォリオサイト。UIデザインとフロントエンド開発を紹介します。',
+};

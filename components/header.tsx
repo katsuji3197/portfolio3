@@ -294,7 +294,7 @@ export default function Header({
       />
 
       <header
-        className={`fixed top-0 left-0 right-0 z-50 bg-neutral-900/40 backdrop-blur-xs border-b-[1px] border-neutral-500 transform transition-transform duration-300 ${headerTranslateClass}`}
+        className={`fixed top-0 left-0 right-0 z-50 bg-neutral-900/20 backdrop-blur-xs border-b-[1px] border-neutral-700 transform transition-transform duration-300 ${headerTranslateClass}`}
       >
         <div className="pr-8 pl-8">
           <div className="flex justify-between items-center h-16">
@@ -417,7 +417,7 @@ export default function Header({
                   <Link
                     key={index}
                     href={link.href}
-                    className={`flex flex-col justify-center px-4 h-16 text-md rounded-md font-medium background-blur-sm opacity-200 duration-100 ${
+                    className={`flex flex-col justify-center px-4 transition-colors h-16 text-md rounded-md font-medium background-blur-sm opacity-200 duration-300 ${
                       isCurrentPage
                         ? 'text-purple-300 cursor-default'
                         : 'text-neutral-200 hover:text-neutral-300 hover:bg-neutral-800/50 hover:border-[1px] hover:border-neutral-500'
