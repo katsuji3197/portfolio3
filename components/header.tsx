@@ -34,7 +34,7 @@ export default function Header({
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(0.6);
   const [showConsentPopup, setShowConsentPopup] = useState(true);
-  const [_hasConsented, setHasConsented] = useState(false);
+  const [, setHasConsented] = useState(false);
   const [userExplicitlyConsented, setUserExplicitlyConsented] = useState(false); // ユーザーが明示的に同意したかどうか
   const [currentTrack, setCurrentTrack] = useState(musicTracks[0]); // 初期値は固定
 
