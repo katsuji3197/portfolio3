@@ -144,7 +144,6 @@ export default function DNAHelix({
     const localYAxis = new Vector3(0, 1, 0);
     const animate = () => {
       const now = performance.now();
-      const elapsed = (now - t0) / 1000;
       const dt = (now - last) / 1000;
       last = now;
 

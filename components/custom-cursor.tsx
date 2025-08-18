@@ -14,7 +14,6 @@ export default function CustomCursor() {
   const coordsRef = useRef({ x: 0, y: 0 });
   const trailElementsRef = useRef<CursorTrail[]>([]);
   const animationRef = useRef<number | undefined>(undefined);
-  const rippleRef = useRef<HTMLDivElement | null>(null);
 
   const TRAIL_COUNT = 16;
 

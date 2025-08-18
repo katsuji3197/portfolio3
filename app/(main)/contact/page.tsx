@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import GoogleFormsAPIContactForm from '@/components/google-forms-api-contact-form';
 import Accordion from '@/components/accordion';
 import Image from 'next/image';
@@ -42,7 +43,7 @@ const socialLinks = [
     id: 'github',
     name: 'GitHub',
     handle: '@katsuji3197',
-    url: 'https://github.com/iamkatsuji',
+    url: 'https://github.com/katsuji3197',
     icon: '/icons/github.svg',
     alt: 'GitHub',
   },
@@ -51,7 +52,7 @@ const socialLinks = [
 export default function Contact() {
   return (
     <div className="text-neutral-100">
-      <section className="min-h-[1000px] md:min-h-[800px] w-full h-screen justify-center items-center">
+      <section className="min-h-[900px] w-full h-screen justify-center items-center">
         <div className="flex flex-col lg:flex-row items-center justify-center h-full py-4 px-4 md:px-24 w-full">
           <div className="w-full mb-8 flex gap-2 items-end justify-start text-start lg:w-72">
             <h1 className="text-2xl font-bold ">Contact</h1>
@@ -99,3 +100,8 @@ export default function Contact() {
     </div>
   );
 }
+
+export const metadata: Metadata = {
+  title: 'Contact — N.Motoki Portfolio',
+  description: 'お問い合わせページ。SNSやメールからお気軽にご連絡ください。',
+};

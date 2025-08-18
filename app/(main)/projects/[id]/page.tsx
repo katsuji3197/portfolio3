@@ -1,5 +1,6 @@
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
+import type { Metadata } from 'next';
 import { PROJECTS } from '@/data/projects';
 
 type PageProps = { params: Promise<{ id: string }> };
@@ -57,4 +58,17 @@ export default async function ProjectDetailPage({ params }: PageProps) {
       </div>
     </div>
   );
+}
+
+export async function generateMetadata({
+  params,
+}: PageProps): Promise<Metadata> {
+  const { id } = await params;
+  const project = PROJECTS.find(p => p.id === id);
+  if (!project) return { title: 'Project — N.Motoki' };
+
+  return {
+    title: `${project.title} — N.Motoki`,
+    description: project.description ?? project.title,
+  };
 }

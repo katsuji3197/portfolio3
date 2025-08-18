@@ -1,0 +1,5 @@
+Sitemap: ${process.env.NEXT_PUBLIC_SITE_URL || 'https://folio.paon.dev'}/sitemap.xml
+User-agent: *
+Disallow:
+
+

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { usePathname } from 'next/navigation';
 
 interface MusicConsentPopupProps {
@@ -17,7 +17,13 @@ export default function MusicConsentPopup({
   const pathname = usePathname();
   const [isVisible, setIsVisible] = useState(true);
   const [isFadingOut, setIsFadingOut] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(5);
+  const [timeLeft, setTimeLeft] = useState(8);
+
+  // 最新の onDecline を参照する ref（タイマー内で安全に呼ぶため）
+  const onDeclineRef = useRef(onDecline);
+  useEffect(() => {
+    onDeclineRef.current = onDecline;
+  }, [onDecline]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -26,7 +32,8 @@ export default function MusicConsentPopup({
           setIsFadingOut(true);
           setTimeout(() => {
             setIsVisible(false);
-            onDecline();
+            // ref 経由で最新の onDecline を呼ぶ
+            onDeclineRef.current();
           }, 300); // アニメーション時間に合わせる
           return 0;
         }
@@ -35,6 +42,7 @@ export default function MusicConsentPopup({
     }, 1000);
 
     return () => clearInterval(timer);
+    // onDeclineRef で最新値を参照するため依存配列は空に保つ
   }, []);
 
   const handleConsent = () => {
