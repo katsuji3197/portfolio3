@@ -60,10 +60,9 @@ export default async function ProjectDetailPage({ params }: PageProps) {
   );
 }
 
-export async function generateMetadata(
-  { params }: PageProps,
-  parent?: Promise<Metadata>
-): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: PageProps): Promise<Metadata> {
   const { id } = await params;
   const project = PROJECTS.find(p => p.id === id);
   if (!project) return { title: 'Project — N.Motoki' };
