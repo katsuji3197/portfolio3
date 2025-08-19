@@ -39,7 +39,7 @@ export default function ProfileTabs() {
   const tabs = [
     { id: 'comment' as TabType, label: 'Comment', jpLabel: 'コメント' },
     { id: 'skills' as TabType, label: 'Skills', jpLabel: 'スキル' },
-    { id: 'history' as TabType, label: 'History', jpLabel: '履歴' },
+    { id: 'history' as TabType, label: 'History', jpLabel: '略歴' },
   ];
 
   // スキルデータの配列
@@ -102,6 +102,9 @@ export default function ProfileTabs() {
       case 'comment':
         return (
           <div className="text-xs md:text-sm w-full text-neutral-300 lg:w-[110%] text-start flex flex-col items-start leading-relaxed tracking-wider">
+            <h1 className="pb-4 font-semibold text-md md:text-xl text-neutral-400">
+              コメント
+            </h1>
             <p>ご覧いただきありがとうございます。</p>
             <br />
             <p>
@@ -115,12 +118,14 @@ export default function ProfileTabs() {
               技術もデザインも紙一重。技術はデザインであり、デザインは技術です。
             </p>
             <p>
-              どちらも人に寄り添い、ユーザーの悩みや様々な問題を解決することも、感動を与えることもできる。
+              どちらも人に寄り添い、悩みや様々な問題を解決することも、感動を与えることもできます。
             </p>
-            <p>こういった点で、両者に大きな違いはありません。</p>
+            <p>
+              こういった点で、両者に大きな違いはありません。このような考えを持っています。
+            </p>
             <p>そのため私は、両者の境界を持たないようにしています。</p>
             <br />
-            <p>まだまだ経験が浅いものの、様々な経験を積みながら、</p>
+            <p>まだまだ経験が浅いため、様々な経験を積みながら、</p>
             <p>さらなるスキルを磨いていきたいと思っています。</p>
             <br />
             <p>何か私にできることがありましたら、お気軽にご相談ください。</p>
@@ -128,30 +133,37 @@ export default function ProfileTabs() {
         );
       case 'skills':
         return (
-          <div className="flex flex-col lg:grid grid-cols-2 gap-12">
-            {skillsData.map((category, categoryIndex) => (
-              <div key={categoryIndex}>
-                <h3 className="text-md font-medium text-neutral-500 mb-3 w-[280px] border-b border-neutral-700 pb-2">
-                  {category.title}
-                </h3>
-                <div
-                  className={`grid ${category.gridCols} ${category.gap} text-sm`}
-                >
-                  {category.items.map((item, itemIndex) => (
-                    <div key={itemIndex} className="flex items-center gap-2">
-                      <Image
-                        src={item.icon}
-                        alt={item.alt}
-                        width={20}
-                        height={20}
-                        className="opacity-70"
-                      />
-                      <span className="text-sm lg:text-base">{item.name}</span>
-                    </div>
-                  ))}
+          <div>
+            <h1 className="pb-4 font-semibold text-md md:text-xl text-neutral-400">
+              スキル
+            </h1>
+            <div className="flex flex-col lg:grid grid-cols-2 gap-12">
+              {skillsData.map((category, categoryIndex) => (
+                <div key={categoryIndex}>
+                  <h3 className="text-md font-medium text-neutral-500 mb-3 w-[280px] border-b border-neutral-700 pb-2">
+                    {category.title}
+                  </h3>
+                  <div
+                    className={`grid ${category.gridCols} ${category.gap} text-sm`}
+                  >
+                    {category.items.map((item, itemIndex) => (
+                      <div key={itemIndex} className="flex items-center gap-2">
+                        <Image
+                          src={item.icon}
+                          alt={item.alt}
+                          width={20}
+                          height={20}
+                          className="opacity-70"
+                        />
+                        <span className="text-sm lg:text-base">
+                          {item.name}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         );
       case 'history':

@@ -51,7 +51,7 @@ export default function Accordion({
             damping: 25,
             stiffness: 200,
           }}
-          className="max-h-[80vh] relative bg-neutral-900/10 backdrop-blur-xs border-t border-neutral-700 overflow-y-auto"
+          className="max-h-[80vh] relative bg-neutral-900/10  rounded-t-xl mx-2 backdrop-blur-xs border-t border-neutral-700 overflow-y-auto"
         >
           {/* ヘッダー - sticky */}
           <div
@@ -121,7 +121,7 @@ export default function Accordion({
           isOpen ? 'h-fit opacity-100' : 'max-h-0 opacity-0'
         }`}
       >
-        <div className="px-6 py-4 bg-neutral-900/10">{children}</div>
+        <div className="px-6 py-12 bg-neutral-900/10">{children}</div>
       </div>
     </div>
   );

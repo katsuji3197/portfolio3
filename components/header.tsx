@@ -33,6 +33,7 @@ export default function Header({
 }: HeaderProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(0.6);
+  const [userPausedExplicitly, setUserPausedExplicitly] = useState(false); // ユーザーが明示的に停止したか
   const [showConsentPopup, setShowConsentPopup] = useState(true);
   const [, setHasConsented] = useState(false);
   const [userExplicitlyConsented, setUserExplicitlyConsented] = useState(false); // ユーザーが明示的に同意したかどうか
@@ -121,11 +122,16 @@ export default function Header({
   const togglePlay = () => {
     if (audioRef.current) {
       if (isPlaying) {
+        // ユーザー操作で停止したことを記録
         audioRef.current.pause();
+        setUserPausedExplicitly(true);
+        setIsPlaying(false);
       } else {
+        // 再生ボタンで再生された場合はユーザーによる停止フラグを解除
         audioRef.current.play();
+        setUserPausedExplicitly(false);
+        setIsPlaying(true);
       }
-      setIsPlaying(!isPlaying);
     }
   };
 
@@ -226,6 +232,9 @@ export default function Header({
     ) {
       const handleFirstInteraction = () => {
         if (audioRef.current && !isPlaying) {
+          // ユーザーが明示的に停止している場合は自動再生を抑止
+          if (userPausedExplicitly) return;
+
           audioRef.current
             .play()
             .then(() => {

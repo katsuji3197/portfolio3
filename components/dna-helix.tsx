@@ -70,6 +70,17 @@ export default function DNAHelix({
     setRendererSize();
     container.appendChild(renderer.domElement);
 
+    // 初期は透明にしておき、読み込み時に3秒かけてフェードインさせる
+    // CSS トランジションで実装（canvas 要素の style を直接操作）
+    renderer.domElement.style.opacity = '0';
+    renderer.domElement.style.transition = 'opacity 3s ease';
+    requestAnimationFrame(() => {
+      // reflow を強制してから opacity を 1 にする
+      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+      void (renderer.domElement as HTMLCanvasElement).offsetWidth;
+      renderer.domElement.style.opacity = '1';
+    });
+
     // 二重らせんを構築
     const root = new Group();
     const content = new Group();

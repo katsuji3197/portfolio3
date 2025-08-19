@@ -147,7 +147,7 @@ export default function NightSky() {
           uniforms: {
             uTime: { value: 0 },
             uFadeDuration: { value: 1.2 },
-            // サイズを3倍に
+            // サイズを2倍に
             uSize: { value: size * 1.2 * 2 },
             map: { value: circularTexture },
           },
@@ -199,12 +199,12 @@ export default function NightSky() {
 
         const bandWidth = 200;
         const bandLength = 12000;
-        const thickness = 600; // 太さを150から50に変更
+        const thickness = 600;
         const maxDelay = 4.0;
 
         for (let i = 0; i < count; i++) {
           // 帯状の領域に星を配置
-          const x = (Math.random() - 0.5) * bandLength;
+          const x = (Math.random() - 0.7) * bandLength;
           // yとzで楕円形の断面を表現し、中心部の密度を高くする
           const u = Math.random() * 1 * Math.PI;
           const r = Math.sqrt(Math.random()); // 中心に寄せるための平方根
@@ -285,9 +285,9 @@ export default function NightSky() {
       };
       // --- ここまで天の川の生成 ---
 
-      layer1 = createStars(7000, '#eaf2ff', 2.0, 950);
-      layer2 = createStars(5600, '#d9e6ff', 3.0, 1400);
-      layer3 = createStars(4600, '#ffffff', 4.0, 1700);
+      layer1 = createStars(8000, '#eaf2ff', 2.0, 950);
+      layer2 = createStars(7600, '#d9e6ff', 3.0, 1400);
+      layer3 = createStars(5600, '#ffffff', 4.0, 1700);
 
       // ShaderMaterial の uniform を初期化
       const initLayerUniforms = (layer: any, fadeDuration = 1.2) => {
@@ -302,10 +302,10 @@ export default function NightSky() {
       initLayerUniforms(layer3, 2.0);
 
       // 天の川を生成してシーンに追加
-      milkyWay = createMilkyWay(43000, '#ffffff', 1.0);
+      milkyWay = createMilkyWay(28000, '#ffffff', 1.0);
       // 天の川を斜めに傾ける
       milkyWay.points.rotation.x = Math.PI / 6;
-      milkyWay.points.rotation.z = Math.PI / 6;
+      milkyWay.points.rotation.z = -Math.PI / 6;
 
       root.add(layer1.points);
       root.add(layer2.points);
@@ -339,7 +339,6 @@ export default function NightSky() {
         );
         const headMaterial = new PointsMaterial({
           color: new Color('#a2b8ff'),
-          // 流れ星の頭を大きく明るく（サイズと不透明度を3倍）
           size: 2.0 * 2.0,
           transparent: true,
           opacity: 0.4,
@@ -466,14 +465,14 @@ export default function NightSky() {
         root.rotation.x = Math.sin(elapsed * 0.08) * 0.05;
 
         // パララックス風に各レイヤーを微妙に動かす
-        layer1.points.rotation.y += 0.0003;
-        layer2.points.rotation.y += 0.0001;
-        layer3.points.rotation.y += 0.00005;
+        layer1.points.rotation.y += 0.0002;
+        layer2.points.rotation.y += 0.00007;
+        layer3.points.rotation.y += 0.00002;
         milkyWay.points.rotation.x += 0.00008; // 天の川もゆっくり回転
 
         // カメラのゆるいドリフト
-        camera.position.x = Math.sin(elapsed * 0.15) * 20;
-        camera.position.y = Math.cos(elapsed * 0.12) * 12;
+        camera.position.x = Math.sin(elapsed * 0.15) * 10;
+        camera.position.y = Math.cos(elapsed * 0.12) * 6;
         camera.lookAt(0, 0, 0);
 
         // 流れ星のスポーン（確率的）
@@ -599,7 +598,7 @@ export default function NightSky() {
   return (
     <div
       ref={containerRef}
-      className="fixed inset-0 -z-10 pointer-events-none"
+      className="fixed inset-0 -z-10 pointer-events-none opacity-80"
       style={{
         background:
           'radial-gradient(1000px 600px at 50% 120%, #0b1226 0%, #070b18 35%, #050912 70%, #03060d 100%)',
