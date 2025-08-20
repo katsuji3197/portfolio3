@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import TimelineHome from './timeline-home';
 import Image from 'next/image';
+import Link from 'next/link';
 
 type TabType = 'comment' | 'skills' | 'history';
 
@@ -129,6 +130,14 @@ export default function ProfileTabs() {
             <p>さらなるスキルを磨いていきたいと思っています。</p>
             <br />
             <p>何か私にできることがありましたら、お気軽にご相談ください。</p>
+            <div className="flex items-center justify-center pt-4">
+              <Link
+                href="/contact"
+                className="text-sm text-neutral-400 border-b border-neutral-400 hover:text-neutral-300 duration-200"
+              >
+                お問い合わせ
+              </Link>
+            </div>
           </div>
         );
       case 'skills':

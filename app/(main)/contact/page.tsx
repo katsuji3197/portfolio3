@@ -3,6 +3,7 @@ import GoogleFormsAPIContactForm from '@/components/google-forms-api-contact-for
 import Accordion from '@/components/accordion';
 import Image from 'next/image';
 import Link from 'next/link';
+import SectionHeader from '@/components/section-header';
 
 // SNSリンクのデータ配列
 const socialLinks = [
@@ -55,8 +56,7 @@ export default function Contact() {
       <section className="min-h-[900px] w-full h-screen justify-center items-center">
         <div className="flex flex-col lg:flex-row items-center justify-center h-full py-4 px-4 md:px-24 w-full">
           <div className="w-full mb-8 flex gap-2 items-end justify-start text-start lg:w-72">
-            <h1 className="text-2xl font-bold ">Contact</h1>
-            <p className="text-sm text-neutral-400">お問い合わせ</p>
+            <SectionHeader title="Contact" subtitle="お問い合わせ" level={1} />
           </div>
 
           {/* SNSリンクをmapで描画 */}

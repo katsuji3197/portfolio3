@@ -29,7 +29,7 @@ export default function ProjectCard({
           fill
           sizes="(max-width: 640px) 90vw, 320px"
           quality={75}
-          className="object-contain"
+          className="object-contain opacity-70"
         />
       </div>
       <div className={`p-4 flex flex-col gap-2 ${containerClassName}`}>
