@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import CirkitHp from './projects/cirkit-hp';
 
 export type Project = {
   id: string;
@@ -19,6 +20,7 @@ export const PROJECTS: ReadonlyArray<Project> = [
     description:
       '金沢工業大学の課外活動であり、学生ベンチャーでもある団体のHP。',
     createdAt: '2023-10',
+    content: <CirkitHp />,
   },
   {
     id: 'alien',
