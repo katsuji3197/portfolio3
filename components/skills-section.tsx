@@ -18,14 +18,14 @@ const skillSets: SkillSet[] = [
     skills: [
       {
         name: 'UI Design',
-        level: 75,
+        level: 80,
         description: '画面設計・ビジュアルデザイン',
         icon: '/icons/figma.svg',
       },
       {
-        name: 'Illustration',
-        level: 50,
-        description: 'シンプルなキャラクターやアセット作成',
+        name: 'Illustrator',
+        level: 60,
+        description: 'ポスター・バナー制作',
         icon: '/icons/illustrator.svg',
       },
     ],
@@ -47,7 +47,7 @@ const skillSets: SkillSet[] = [
       },
       {
         name: 'Tailwind',
-        level: 70,
+        level: 85,
         description: 'ユーティリティでの高速なスタイリング',
         icon: '/icons/tailwind.svg',
       },
@@ -67,6 +67,12 @@ const skillSets: SkillSet[] = [
         level: 40,
         description: 'スクリプトやデータ処理',
         icon: '/icons/python.svg',
+      },
+      {
+        name: 'Cursor',
+        level: 80,
+        description: 'アプリケーション開発',
+        icon: '/icons/cursor.svg',
       },
     ],
   },
@@ -96,7 +102,7 @@ export default function SkillsSection() {
             {set.skills.map((skill, sidx) => (
               <div
                 key={sidx}
-                className="flex flex-col gap-2 bg-neutral-900/10 p-4 rounded-lg border border-neutral-700"
+                className="flex flex-col gap-2 bg-neutral-900/10 backdrop-blur-xs p-4 rounded-lg border border-neutral-700"
               >
                 <div className="flex items-center gap-3">
                   {skill.icon && (

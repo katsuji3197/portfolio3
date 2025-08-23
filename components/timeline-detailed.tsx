@@ -27,7 +27,7 @@ const detailedTimeline = [
 
 export default function TimelineDetailed() {
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col">
       {detailedTimeline.map((item, idx) => (
         <TimelineItem key={idx} year={item.year} text={item.text} />
       ))}

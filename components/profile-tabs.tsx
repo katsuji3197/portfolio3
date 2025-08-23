@@ -103,7 +103,7 @@ export default function ProfileTabs() {
       case 'comment':
         return (
           <div className="text-xs md:text-sm w-full text-neutral-300 lg:w-[110%] text-start flex flex-col items-start leading-relaxed tracking-wider">
-            <h1 className="pb-4 font-semibold text-md md:text-xl text-neutral-400">
+            <h1 className="pb-4 font-medium text-md md:text-xl text-amber-200/80">
               コメント
             </h1>
             <p>ご覧いただきありがとうございます。</p>
@@ -143,7 +143,7 @@ export default function ProfileTabs() {
       case 'skills':
         return (
           <div>
-            <h1 className="pb-4 font-semibold text-md md:text-xl text-neutral-400">
+            <h1 className="pb-4 font-medium text-md md:text-xl text-amber-200/80">
               スキル
             </h1>
             <div className="flex flex-col lg:grid grid-cols-2 gap-12">

@@ -428,7 +428,7 @@ export default function Header({
                     href={link.href}
                     className={`flex flex-col justify-center px-4 transition-colors h-16 text-md rounded-md font-medium background-blur-sm opacity-200 duration-300 ${
                       isCurrentPage
-                        ? 'text-purple-300 cursor-default'
+                        ? 'text-amber-200/80 cursor-default'
                         : 'text-neutral-200 hover:text-neutral-300 hover:bg-neutral-800/50 hover:border-[1px] hover:border-neutral-500'
                     }`}
                     onClick={() => setIsMenuOpen(false)}
@@ -453,7 +453,7 @@ export default function Header({
                   <button
                     onClick={togglePlay}
                     className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                      isPlaying ? 'bg-purple-500' : 'bg-neutral-600'
+                      isPlaying ? 'bg-amber-300/60' : 'bg-neutral-600'
                     }`}
                     aria-label={isPlaying ? 'BGMを停止' : 'BGMを再生'}
                   >
@@ -479,7 +479,10 @@ export default function Header({
                       onChange={handleVolumeChange}
                       className="w-full h-1 bg-neutral-700/50 rounded-lg appearance-none cursor-pointer slider"
                       style={{
-                        background: `linear-gradient(to right, #a855f7 0%, #a855f7 ${volume * 100}%, #373737 ${volume * 100}%, #373737 100%)`,
+                        // amber-300 is rgb(251, 191, 36) in Tailwind v3; using 80% opacity
+                        background: `linear-gradient(to right, rgba(251,191,36,0.8) 0%, rgba(251,191,36,0.8) ${
+                          volume * 100
+                        }%, #373737 ${volume * 100}%, #373737 100%)`,
                       }}
                     />
                   </div>
@@ -498,7 +501,9 @@ export default function Header({
                   <button
                     onClick={toggleCustomCursor}
                     className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                      isCustomCursorEnabled ? 'bg-purple-500' : 'bg-neutral-600'
+                      isCustomCursorEnabled
+                        ? 'bg-amber-300/60'
+                        : 'bg-neutral-600'
                     }`}
                     aria-label={
                       isCustomCursorEnabled
