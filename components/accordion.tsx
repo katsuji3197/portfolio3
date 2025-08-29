@@ -115,14 +115,20 @@ export default function Accordion({
         />
       </button>
 
-      <div
-        id={`accordion-content-${title.replace(/\s+/g, '-').toLowerCase()}`}
-        className={`overflow-hidden transition-all duration-300 ease-in-out ${
-          isOpen ? 'h-fit opacity-100' : 'max-h-0 opacity-0'
-        }`}
-      >
-        <div className="px-6 py-12 bg-neutral-900/10">{children}</div>
-      </div>
+      <AnimatePresence initial={false}>
+        {isOpen && (
+          <motion.div
+            id={`accordion-content-${title.replace(/\s+/g, '-').toLowerCase()}`}
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.28, ease: 'easeInOut' }}
+            className="overflow-hidden"
+          >
+            <div className="px-6 py-12 bg-neutral-900/10">{children}</div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
