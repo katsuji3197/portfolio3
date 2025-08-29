@@ -4,7 +4,7 @@ export default function ProfileCard() {
   return (
     <div className="flex items-center md:flex-col justify-center w-full md:w-72 p-3 md:px-4 md:py-4 bg-neutral-900/10 backdrop-blur-xs border-[1px] border-neutral-700 rounded-lg mt-0 md:mt-12">
       <Image
-        src="/img/katsuji-fish.jpg"
+        src="/img/katsuji-fish.webp"
         alt="profile"
         width={1000}
         height={1000}

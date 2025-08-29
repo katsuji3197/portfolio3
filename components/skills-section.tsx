@@ -34,6 +34,18 @@ const skillSets: SkillSet[] = [
     title: 'Frontend',
     skills: [
       {
+        name: 'HTML',
+        level: 80,
+        description: 'Webページの基本構造の構築',
+        icon: '/icons/html.svg',
+      },
+      {
+        name: 'CSS',
+        level: 70,
+        description: 'Webページのスタイリング',
+        icon: '/icons/css.svg',
+      },
+      {
         name: 'Next.js',
         level: 70,
         description: 'SSG/SSRを使った実装',
@@ -41,14 +53,14 @@ const skillSets: SkillSet[] = [
       },
       {
         name: 'TypeScript',
-        level: 65,
-        description: '型を活かした堅牢な実装',
+        level: 70,
+        description: '型を活かした実装',
         icon: '/icons/typescript.svg',
       },
       {
         name: 'Tailwind',
         level: 85,
-        description: 'ユーティリティでの高速なスタイリング',
+        description: '柔軟かつ高速なスタイリング',
         icon: '/icons/tailwind.svg',
       },
     ],
@@ -57,21 +69,21 @@ const skillSets: SkillSet[] = [
     title: 'Other',
     skills: [
       {
-        name: 'Git',
-        level: 70,
-        description: 'バージョン管理・PRフロー',
+        name: 'GitHub',
+        level: 80,
+        description: 'チーム開発・バージョン管理',
         icon: '/icons/github.svg',
       },
       {
         name: 'Python',
-        level: 40,
-        description: 'スクリプトやデータ処理',
+        level: 70,
+        description: '簡単なデータ処理',
         icon: '/icons/python.svg',
       },
       {
         name: 'Cursor',
         level: 80,
-        description: 'アプリケーション開発',
+        description: 'AIとの連携による爆発的な生産性',
         icon: '/icons/cursor.svg',
       },
     ],
@@ -80,9 +92,9 @@ const skillSets: SkillSet[] = [
 
 function ProgressBar({ value }: { value: number }) {
   return (
-    <div className="w-full bg-neutral-800/30 h-2 rounded-full overflow-hidden">
+    <div className="w-full bg-neutral-800/30 h-1 rounded-full overflow-hidden">
       <div
-        className="h-2 bg-neutral-200/70"
+        className="h-1 bg-neutral-200/70"
         style={{ width: `${Math.max(0, Math.min(100, value))}%` }}
       />
     </div>
@@ -94,7 +106,7 @@ export default function SkillsSection() {
     <div className="flex flex-col gap-8">
       {skillSets.map((set, idx) => (
         <div key={idx} className="flex flex-col gap-4">
-          <h3 className="text-md font-medium text-neutral-400 border-b border-neutral-700 pb-2 w-[240px]">
+          <h3 className="text-md md:text-lg font-medium text-neutral-400 border-b border-neutral-700 pb-2 w-full">
             {set.title}
           </h3>
 
@@ -102,7 +114,7 @@ export default function SkillsSection() {
             {set.skills.map((skill, sidx) => (
               <div
                 key={sidx}
-                className="flex flex-col gap-2 bg-neutral-900/10 backdrop-blur-xs p-4 rounded-lg border border-neutral-700"
+                className="flex flex-col gap-2 bg-neutral-900/10 backdrop-blur-xs px-4 py-2 rounded-lg border border-neutral-700"
               >
                 <div className="flex items-center gap-3">
                   {skill.icon && (
@@ -114,20 +126,20 @@ export default function SkillsSection() {
                       className="opacity-80"
                     />
                   )}
-                  <div>
-                    <div className="text-sm font-medium text-neutral-100">
+                  <div className="flex flex-col gap-1">
+                    <div className="text-sm md:text-base font-medium text-neutral-100">
                       {skill.name}
                     </div>
-                    <div className="text-xs text-neutral-400">
+                    <div className="text-xs md:text-sm text-neutral-400">
                       {skill.description}
                     </div>
                   </div>
                 </div>
-                <div className="pt-2">
+                <div className="pt-1">
                   <ProgressBar value={skill.level} />
                 </div>
                 <div className="text-xs text-neutral-400 pt-1">
-                  {skill.level}% の自信
+                  {skill.level}%の自信
                 </div>
               </div>
             ))}

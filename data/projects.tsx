@@ -14,7 +14,7 @@ export type Project = {
 export const PROJECTS: ReadonlyArray<Project> = [
   {
     id: 'cirkithp',
-    imageSrc: '/img/samuneir/cirkit.png',
+    imageSrc: '/img/samuneir/cirkit.webp',
     title: 'CirKit HP',
     tags: ['Next.js', 'Tailwind CSS', 'TypeScript', 'CirKit'],
     description:
@@ -24,7 +24,7 @@ export const PROJECTS: ReadonlyArray<Project> = [
   },
   {
     id: 'alien',
-    imageSrc: '/img/samuneir/alien.png',
+    imageSrc: '/img/samuneir/alien.webp',
     title: 'Alien',
     tags: ['Vite', 'Tailwind CSS', 'Javascript', 'Hackathon'],
     description: '長期ハッカソン Tornado 2023で制作したサービス。',
@@ -32,7 +32,7 @@ export const PROJECTS: ReadonlyArray<Project> = [
   },
   {
     id: 'portfolio2',
-    imageSrc: '/img/samuneir/folio2.png',
+    imageSrc: '/img/samuneir/folio2.svg',
     title: 'Portfolio 2.0',
     tags: ['Next.js', 'Tailwind CSS', 'TypeScript', 'Personal'],
     description: 'ひとつ前のポートフォリオサイト。',
@@ -40,7 +40,7 @@ export const PROJECTS: ReadonlyArray<Project> = [
   },
   {
     id: 'minshoku',
-    imageSrc: '/img/samuneir/minshoku.png',
+    imageSrc: '/img/samuneir/minshoku.webp',
     title: 'nono1 みんなの食堂 HP',
     tags: ['Next.js', 'Tailwind CSS', 'TypeScript', 'CirKit'],
     description: '野々市市の、拠点を持たないこども食堂さんのHP。',
@@ -48,7 +48,7 @@ export const PROJECTS: ReadonlyArray<Project> = [
   },
   {
     id: 'cybozu',
-    imageSrc: '/img/samuneir/cybozu.png',
+    imageSrc: '/img/samuneir/cybozu.webp',
     title: 'Cybozu Office Mobile Improvement',
     tags: ['Design', 'Intern'],
     description:
@@ -57,7 +57,7 @@ export const PROJECTS: ReadonlyArray<Project> = [
   },
   {
     id: 'luminiscape',
-    imageSrc: '/img/samuneir/luminiscape.png',
+    imageSrc: '/img/samuneir/luminiscape.svg',
     title: 'LuminiScape',
     tags: ['Next.js', 'Tailwind CSS', 'TypeScript', 'Hackathon'],
     description: '長期ハッカソン Tornado 2024で制作したサービス。',
@@ -65,7 +65,7 @@ export const PROJECTS: ReadonlyArray<Project> = [
   },
   {
     id: 'purpleflair',
-    imageSrc: '/img/samuneir/purpleflair.png',
+    imageSrc: '/img/samuneir/purpleflair.svg',
     title: 'Purple Flair',
     tags: ['Next.js', 'Tailwind CSS', 'TypeScript', 'Intern'],
     description:
