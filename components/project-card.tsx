@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import type { Project } from '@/data/projects';
+import { formatYearMonth } from '@/lib/date-utils';
 
 type ProjectCardProps = {
   project: Project;
@@ -38,7 +39,7 @@ export default function ProjectCard({
             {project.title}
           </h3>
           <span className="text-xs text-neutral-400 whitespace-nowrap">
-            {project.createdAt}
+            {formatYearMonth(project.createdAt)}
           </span>
         </div>
         <div className="flex flex-wrap gap-1">

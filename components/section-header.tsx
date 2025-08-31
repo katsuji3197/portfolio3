@@ -15,9 +15,9 @@ export default function SectionHeader({
   return (
     <div className="flex items-end gap-2">
       {level === 1 ? (
-        <h1 className="text-2xl font-bold">{title}</h1>
+        <h1 className="text-2xl font-bold text-amber-200/80">{title}</h1>
       ) : (
-        <h2 className="text-2xl font-bold">{title}</h2>
+        <h2 className="text-2xl font-bold text-amber-200/80">{title}</h2>
       )}
       {subtitle && (
         <p className="text-sm text-neutral-400 font-medium tracking-wider">

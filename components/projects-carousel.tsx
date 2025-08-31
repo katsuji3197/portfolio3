@@ -74,7 +74,7 @@ export default function ProjectsCarousel({
         className="px-8 py-4"
       >
         {projects.map(project => (
-          <SwiperSlide key={project.id} className="h-screen">
+          <SwiperSlide key={project.id} className="h-screen w-full">
             <ProjectCard
               project={project}
               className="h-full"

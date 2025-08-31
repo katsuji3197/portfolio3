@@ -1,4 +1,4 @@
-import { PROJECTS } from '@/data/projects';
+import { getProjects } from '@/lib/microcms';
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://folio.paon.dev';
 
@@ -15,9 +15,15 @@ function createUrl(loc: string, lastmod?: string) {
 
 export async function GET() {
   const pages = ['/', '/projects', '/profile', '/contact'];
-  const projectUrls = PROJECTS.map(p => `/projects/${p.id}`);
+  const projects = await getProjects();
+  const projectUrls = projects.map((p: { id: string; createdAt: string }) => ({
+    loc: `/projects/${p.id}`,
+    lastmod: p.createdAt,
+  }));
 
-  const urls = [...pages, ...projectUrls].map(path => createUrl(path)).join('');
+  const urls = [...pages.map(path => ({ loc: path })), ...projectUrls]
+    .map(({ loc, lastmod }) => createUrl(loc, lastmod))
+    .join('');
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls}\n</urlset>`;
 

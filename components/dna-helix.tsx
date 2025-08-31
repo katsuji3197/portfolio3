@@ -75,8 +75,6 @@ export default function DNAHelix({
     renderer.domElement.style.opacity = '0';
     renderer.domElement.style.transition = 'opacity 3s ease';
     requestAnimationFrame(() => {
-      // reflow を強制してから opacity を 1 にする
-      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
       void (renderer.domElement as HTMLCanvasElement).offsetWidth;
       renderer.domElement.style.opacity = '1';
     });
