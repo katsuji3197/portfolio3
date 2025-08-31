@@ -1,13 +1,15 @@
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
-import { PROJECTS } from '@/data/projects';
+import { getProjectBySlug } from '@/lib/microcms';
+import { LOCAL_PROJECT_CONTENT } from '@/data/projects';
+import { formatYearMonth } from '@/lib/date-utils';
 
 type PageProps = { params: Promise<{ id: string }> };
 
 export default async function ProjectDetailPage({ params }: PageProps) {
   const { id } = await params;
-  const project = PROJECTS.find(p => p.id === id);
+  const project = await getProjectBySlug(id);
   if (!project) return notFound();
 
   return (
@@ -15,9 +17,11 @@ export default async function ProjectDetailPage({ params }: PageProps) {
       <div className="flex flex-col gap-6">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold">{project.title}</h1>
-          <span className="text-sm text-neutral-400">{project.createdAt}</span>
+          <span className="text-sm text-neutral-400">
+            {formatYearMonth(project.createdAt)}
+          </span>
         </div>
-        {!project.content && (
+        {!LOCAL_PROJECT_CONTENT[project.id] && (
           <div className="relative w-full h-72 bg-neutral-800 border border-neutral-600 rounded-lg overflow-hidden">
             <Image
               src={project.imageSrc}
@@ -38,8 +42,10 @@ export default async function ProjectDetailPage({ params }: PageProps) {
             </span>
           ))}
         </div>
-        {project.content ? (
-          <div className="text-neutral-200 leading-7">{project.content}</div>
+        {LOCAL_PROJECT_CONTENT[project.id] ? (
+          <div className="text-neutral-200 leading-7">
+            {LOCAL_PROJECT_CONTENT[project.id]}
+          </div>
         ) : (
           <div>
             <p className="text-neutral-200 leading-7">{project.description}</p>
@@ -64,7 +70,7 @@ export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
   const { id } = await params;
-  const project = PROJECTS.find(p => p.id === id);
+  const project = await getProjectBySlug(id);
   if (!project) return { title: 'Project — N.Motoki' };
 
   return {
