@@ -261,7 +261,13 @@ export default function Header({
         document.removeEventListener('touchstart', handleFirstInteraction);
       };
     }
-  }, [autoplayAttempted, userExplicitlyConsented, isPlaying, showConsentPopup]);
+  }, [
+    autoplayAttempted,
+    userExplicitlyConsented,
+    isPlaying,
+    showConsentPopup,
+    userPausedExplicitly,
+  ]);
 
   // タイマーのクリーンアップ
   useEffect(() => {

@@ -13,14 +13,30 @@ export const microcmsClient = createClient({
   apiKey,
 });
 
-function mapCmsItemToProject(item: any): Project {
+type CmsTag = { name?: string } | string;
+type CmsItem = {
+  id?: string;
+  slug?: string;
+  thumbnail?: { url?: string };
+  image?: { url?: string };
+  imageSrc?: string;
+  title?: string;
+  name?: string;
+  tags?: CmsTag[];
+  stack?: string[];
+  description?: string;
+  summary?: string;
+  date?: string;
+};
+
+function mapCmsItemToProject(item: CmsItem): Project {
   return {
-    id: item.slug ?? item.id,
+    id: item.slug ?? item.id ?? '',
     imageSrc: item.thumbnail?.url ?? item.image?.url ?? item.imageSrc ?? '',
     title: item.title ?? item.name ?? '',
     tags: Array.isArray(item.tags)
       ? item.tags
-          .map((t: any) => (typeof t === 'string' ? t : (t.name ?? t)))
+          .map(t => (typeof t === 'string' ? t : (t.name ?? '')))
           .filter(Boolean)
       : (item.stack ?? []),
     description: item.description ?? item.summary ?? '',

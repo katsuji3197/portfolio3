@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import TimelineHome from './timeline-home';
 import Image from 'next/image';
-import Link from 'next/link';
 import PrimaryButton from './primary-button';
 
 type TabType = 'comment' | 'skills' | 'history';

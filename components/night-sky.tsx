@@ -531,7 +531,7 @@ export default function NightSky() {
           ) {
             (milkyWay.material as any).uniforms.uTime.value = elapsed;
           }
-        } catch (e) {
+        } catch {
           // ignore
         }
 
@@ -589,7 +589,7 @@ export default function NightSky() {
             container.removeChild(renderer.domElement);
           }
         }
-      } catch (e) {
+      } catch {
         // safe cleanup
       }
     };
