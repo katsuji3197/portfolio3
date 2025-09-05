@@ -9,18 +9,42 @@ export default function ProjectsCarouselClient() {
 
   useEffect(() => {
     let mounted = true;
-    fetch('/api/projects')
-      .then(r => r.json())
-      .then((data: Project[]) => {
+    const controller = new AbortController();
+
+    (async () => {
+      try {
+        const res = await fetch('/api/projects', { signal: controller.signal });
+        // attempt to parse JSON body (if any)
+        let data: unknown = null;
+        try {
+          data = await res.json();
+        } catch (parseErr) {
+          data = null;
+        }
+
         if (!mounted) return;
+
+        if (!res.ok) {
+          // console.error('Failed to fetch projects', res.status, data);
+          setProjects([]);
+          return;
+        }
+
+        if (!Array.isArray(data)) {
+          setProjects([]);
+          return;
+        }
+
         setProjects(data);
-      })
-      .catch(() => {
+      } catch (e) {
         if (!mounted) return;
         setProjects([]);
-      });
+      }
+    })();
+
     return () => {
       mounted = false;
+      controller.abort();
     };
   }, []);
 
