@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import DNAHelix from '@/components/dna-helix';
 import ScrollButton from '@/components/scroll-button';
 import ProjectsCarousel from '@/components/projects-carousel';
+import ProjectsCarouselClient from '@/components/projects-carousel-client';
 import { getProjects } from '@/lib/microcms';
 import TypingText from '@/components/typing-text';
 import PrimaryButton from '@/components/primary-button';
@@ -10,7 +11,7 @@ import ProfileTabs from '@/components/profile-tabs';
 import SectionHeader from '@/components/section-header';
 
 export default async function Home() {
-  const projects = await getProjects();
+  const projects: any = [];
 
   return (
     <div className="text-neutral-200 has-custom-scrollbar">
@@ -66,7 +67,7 @@ export default async function Home() {
             <PrimaryButton href="/projects">すべて見る</PrimaryButton>
           </div>
           <div className="px-4 sm:px-24 xl:px-48">
-            <ProjectsCarousel projects={projects} />
+            <ProjectsCarouselClient />
           </div>
         </div>
         <ScrollButton className="absolute bottom-6 left-1/2 -translate-x-1/2">

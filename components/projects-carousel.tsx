@@ -6,6 +6,7 @@ import { Swiper, SwiperSlide } from 'swiper/react';
 import type { Swiper as SwiperClass } from 'swiper';
 import { Autoplay } from 'swiper/modules';
 import ProjectCard from './project-card';
+import ProjectCardSkeleton from './project-card-skeleton';
 import 'swiper/css';
 
 type ProjectsCarouselProps = {
@@ -30,6 +31,22 @@ export default function ProjectsCarousel({
     if (!s) return;
     s.slideNext();
   };
+
+  if (!projects || projects.length === 0) {
+    return (
+      <div
+        className={`grid gap-6 sm:grid-cols-2 xl:grid-cols-3 ${className ?? ''}`}
+      >
+        {Array.from({ length: 3 }).map((_, i) => (
+          <ProjectCardSkeleton
+            key={i}
+            imageClassName="h-48 sm:h-96 md:h-72"
+            containerClassName="h-40"
+          />
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className={`relative ${className ?? ''}`}>
