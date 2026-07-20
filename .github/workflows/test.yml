@@ -33,7 +33,7 @@ jobs:
       - name: Check if test script exists
         id: check-test
         run: |
-          if pnpm run --silent test > /dev/null 2>&1; then
+          if node -e "try { if (require('./package.json').scripts.test) process.exit(0); } catch(e) {} process.exit(1);" > /dev/null 2>&1; then
             echo "test-script-exists=true" >> $GITHUB_OUTPUT
           else
             echo "test-script-exists=false" >> $GITHUB_OUTPUT

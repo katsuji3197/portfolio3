@@ -18,7 +18,7 @@ export default function ProjectsGridClient() {
         let data: unknown = null;
         try {
           data = await res.json();
-        } catch (parseErr) {
+        } catch {
           data = null;
         }
 
@@ -35,7 +35,7 @@ export default function ProjectsGridClient() {
         }
 
         setProjects(data);
-      } catch (e) {
+      } catch {
         if (!mounted) return;
         setProjects([]);
       }

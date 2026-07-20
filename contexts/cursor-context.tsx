@@ -22,6 +22,7 @@ export function CursorProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const saved = localStorage.getItem('customCursorEnabled');
     if (saved !== null) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsCustomCursorEnabled(JSON.parse(saved));
     }
   }, []);

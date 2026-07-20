@@ -2,7 +2,6 @@ import type { Metadata } from 'next';
 import DNAHelix from '@/components/dna-helix';
 import ScrollButton from '@/components/scroll-button';
 import ProjectsCarouselClient from '@/components/projects-carousel-client';
-import { getProjects } from '@/lib/microcms';
 import TypingText from '@/components/typing-text';
 import PrimaryButton from '@/components/primary-button';
 import ProfileCard from '../../components/profile-card';
@@ -10,7 +9,6 @@ import ProfileTabs from '@/components/profile-tabs';
 import SectionHeader from '@/components/section-header';
 
 export default async function Home() {
-  const projects = await getProjects();
 
   return (
     <div className="text-neutral-200 has-custom-scrollbar">

@@ -18,7 +18,7 @@ export default function ProjectsCarouselClient() {
         let data: unknown = null;
         try {
           data = await res.json();
-        } catch (parseErr) {
+        } catch {
           data = null;
         }
 
@@ -36,7 +36,7 @@ export default function ProjectsCarouselClient() {
         }
 
         setProjects(data);
-      } catch (e) {
+      } catch {
         if (!mounted) return;
         setProjects([]);
       }

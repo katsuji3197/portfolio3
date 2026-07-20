@@ -93,6 +93,7 @@ export default function Header({
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const timeBasedTrack = getTrackByTime();
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCurrentTrack(timeBasedTrack);
 
       // ハイドレーション後に自動再生を試行
@@ -209,6 +210,7 @@ export default function Header({
 
   useEffect(() => {
     if (!shouldApplyScrollHide) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsHeaderVisibleAfterScroll(true);
       return;
     }
