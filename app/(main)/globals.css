@@ -257,7 +257,9 @@ body {
   color: #f43f5e;
   padding: 0.2rem 0.4rem;
   border-radius: 0.25rem;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono',
+    'Courier New', monospace;
   font-size: 0.9em;
 }
 
@@ -285,4 +287,3 @@ body {
   margin: 2rem auto;
   display: block;
 }
-

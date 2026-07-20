@@ -14,7 +14,8 @@ export default async function ProjectDetailPage({ params }: PageProps) {
   if (!project) return notFound();
 
   const hasLocalContent = !!LOCAL_PROJECT_CONTENT[project.id];
-  const hasApiContent = typeof project.content === 'string' && project.content.trim() !== '';
+  const hasApiContent =
+    typeof project.content === 'string' && project.content.trim() !== '';
   const hasDetailContent = hasLocalContent || hasApiContent;
 
   return (
