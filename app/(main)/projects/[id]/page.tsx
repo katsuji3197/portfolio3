@@ -4,6 +4,7 @@ import type { Metadata } from 'next';
 import { getProjectBySlug } from '@/lib/microcms';
 import { LOCAL_PROJECT_CONTENT } from '@/data/projects';
 import { formatYearMonth } from '@/lib/date-utils';
+import { ArrowTopRightOnSquareIcon } from '@heroicons/react/24/outline';
 
 type PageProps = { params: Promise<{ id: string }> };
 
@@ -11,6 +12,10 @@ export default async function ProjectDetailPage({ params }: PageProps) {
   const { id } = await params;
   const project = await getProjectBySlug(id);
   if (!project) return notFound();
+
+  const hasLocalContent = !!LOCAL_PROJECT_CONTENT[project.id];
+  const hasApiContent = typeof project.content === 'string' && project.content.trim() !== '';
+  const hasDetailContent = hasLocalContent || hasApiContent;
 
   return (
     <div className="min-h-[70vh] px-4 sm:px-24 xl:px-48 py-28 text-neutral-100">
@@ -21,7 +26,7 @@ export default async function ProjectDetailPage({ params }: PageProps) {
             {formatYearMonth(project.createdAt)}
           </span>
         </div>
-        {!LOCAL_PROJECT_CONTENT[project.id] && (
+        {!hasLocalContent && (
           <div className="relative w-full h-72 bg-neutral-800 border border-neutral-600 rounded-lg overflow-hidden">
             <Image
               src={project.imageSrc}
@@ -42,10 +47,36 @@ export default async function ProjectDetailPage({ params }: PageProps) {
             </span>
           ))}
         </div>
-        {LOCAL_PROJECT_CONTENT[project.id] ? (
+
+        {project.liveUrl && (
+          <div className="flex justify-start pt-2">
+            <a
+              href={project.liveUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-neutral-900 hover:bg-neutral-800 border border-neutral-700 hover:border-neutral-500 rounded-lg text-sm text-neutral-100 hover:text-white transition-all duration-300 font-medium group shadow-lg shadow-black/40"
+            >
+              <span>プロジェクトを見る / Live Site</span>
+              <ArrowTopRightOnSquareIcon className="w-4 h-4 text-neutral-400 group-hover:text-neutral-200 transition-colors" />
+            </a>
+          </div>
+        )}
+
+        {project.description && hasDetailContent && (
+          <p className="text-neutral-300 text-base leading-relaxed border-l-2 border-neutral-700 pl-4 my-2">
+            {project.description}
+          </p>
+        )}
+
+        {hasLocalContent ? (
           <div className="text-neutral-200 leading-7">
             {LOCAL_PROJECT_CONTENT[project.id]}
           </div>
+        ) : hasApiContent ? (
+          <div
+            className="prose-custom"
+            dangerouslySetInnerHTML={{ __html: project.content as string }}
+          />
         ) : (
           <div>
             <p className="text-neutral-200 leading-7">{project.description}</p>

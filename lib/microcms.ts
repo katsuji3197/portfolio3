@@ -27,6 +27,8 @@ type CmsItem = {
   description?: string;
   summary?: string;
   date?: string;
+  content?: string;
+  liveUrl?: string;
 };
 
 function mapCmsItemToProject(item: CmsItem): Project {
@@ -41,6 +43,8 @@ function mapCmsItemToProject(item: CmsItem): Project {
       : (item.stack ?? []),
     description: item.description ?? item.summary ?? '',
     createdAt: item.date ?? '',
+    content: item.content,
+    liveUrl: item.liveUrl,
   } as Project;
 }
 

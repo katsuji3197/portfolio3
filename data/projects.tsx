@@ -8,7 +8,8 @@ export type Project = {
   tags: string[];
   description?: string;
   createdAt?: string;
-  content?: ReactNode;
+  content?: ReactNode | string;
+  liveUrl?: string;
 };
 
 // ローカルでのみ表示したい詳細コンテンツがある場合はここでマッピングします
