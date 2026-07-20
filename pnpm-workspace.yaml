@@ -1,2 +1,8 @@
-ignoredBuiltDependencies:
-  - '@vercel/speed-insights'
+packages:
+  - '.'
+
+allowBuilds:
+  '@tailwindcss/oxide': true
+  '@vercel/speed-insights': false
+  'sharp': true
+  'unrs-resolver': true
