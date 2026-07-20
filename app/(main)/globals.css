@@ -178,3 +178,112 @@ body {
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
   }
 }
+
+/* microCMSリッチテキスト（HTML）用のプレミアムスタイル */
+.prose-custom {
+  font-size: 1rem;
+  line-height: 1.8;
+  color: #d4d4d4;
+}
+
+.prose-custom p {
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+}
+
+.prose-custom a {
+  color: #ffffff;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  font-weight: 500;
+  transition: opacity 0.2s;
+}
+
+.prose-custom a:hover {
+  opacity: 0.8;
+}
+
+.prose-custom h1,
+.prose-custom h2,
+.prose-custom h3,
+.prose-custom h4 {
+  color: #ffffff;
+  font-weight: 600;
+  margin-top: 2.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.prose-custom h1 {
+  font-size: 1.75rem;
+}
+
+.prose-custom h2 {
+  font-size: 1.4rem;
+  border-bottom: 1px solid #262626;
+  padding-bottom: 0.5rem;
+  margin-top: 3rem;
+}
+
+.prose-custom h3 {
+  font-size: 1.2rem;
+}
+
+.prose-custom ul {
+  list-style-type: disc;
+  padding-left: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.prose-custom ol {
+  list-style-type: decimal;
+  padding-left: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.prose-custom li {
+  margin-bottom: 0.5rem;
+}
+
+.prose-custom blockquote {
+  border-left: 4px solid #404040;
+  padding-left: 1rem;
+  color: #a3a3a3;
+  font-style: italic;
+  margin: 1.5rem 0;
+}
+
+.prose-custom code {
+  background-color: #1e1e1e;
+  color: #f43f5e;
+  padding: 0.2rem 0.4rem;
+  border-radius: 0.25rem;
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono',
+    'Courier New', monospace;
+  font-size: 0.9em;
+}
+
+.prose-custom pre {
+  background-color: #171717;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+  margin-bottom: 1.5rem;
+  border: 1px solid #262626;
+}
+
+.prose-custom pre code {
+  background-color: transparent;
+  color: #e5e5e5;
+  padding: 0;
+  border-radius: 0;
+  font-size: inherit;
+}
+
+.prose-custom img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.5rem;
+  margin: 2rem auto;
+  display: block;
+}
