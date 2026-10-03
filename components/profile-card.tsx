@@ -28,8 +28,7 @@ export default function ProfileCard() {
         <ul className="flex flex-col gap-2">
           <li className="flex flex-col gap-2 text-neutral-400 text-xs md:text-sm">
             <ul>
-              金沢工業大学 <br className="md:hidden" /> 情報フロンティア学部
-              <br /> メディア情報学科 4年
+              WebプロダクトのUIとフロントエンド
             </ul>
           </li>
         </ul>
