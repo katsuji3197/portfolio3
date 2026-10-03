@@ -612,19 +612,19 @@ function createMilkyWayBand(deps: {
 
       void main() {
         vec2 uv = vUv * 2.0 - 1.0;
-        float core = exp(-pow(uv.y * 2.9, 2.0));
-        float halo = exp(-pow(uv.y * 1.15, 2.0)) * 0.92;
+        float core = exp(-pow(uv.y * 2.7, 2.0));
+        float halo = exp(-pow(uv.y * 1.08, 2.0)) * 0.78;
         float along = 0.42 + 0.58 * fbm(vec2(uv.x * 2.4, uv.y * 3.6 + uTime * 0.012));
         float lanes = smoothstep(0.18, 0.78, fbm(vec2(uv.x * 4.6 + 8.0, uv.y * 1.5)));
-        float glow = (core * 1.45 + halo) * along * mix(0.62, 1.2, lanes);
+        float glow = (core * 1.22 + halo) * along * mix(0.55, 1.08, lanes);
         float edge = smoothstep(1.0, 0.16, abs(uv.x));
         glow *= edge;
 
         vec3 cool = vec3(0.72, 0.82, 1.0);
         vec3 warm = vec3(1.0, 0.88, 0.74);
         vec3 col = mix(cool, warm, smoothstep(0.28, 0.78, along));
-        float alpha = glow * 0.92;
-        gl_FragColor = vec4(col * glow * 2.15, alpha);
+        float alpha = glow * 0.74;
+        gl_FragColor = vec4(col * glow * 1.72, alpha);
       }
     `,
     transparent: true,
