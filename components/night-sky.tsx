@@ -21,52 +21,78 @@ type StarLayerConfig = {
 
 const STAR_LAYERS: StarLayerConfig[] = [
   {
-    count: 4200,
+    count: 1600,
     planeZ: -280,
     thickness: 220,
     sizeMin: 6.2,
-    sizeMax: 9.4,
-    brightnessMin: 0.62,
-    brightnessMax: 1.05,
-    twinkleAmp: 0.12,
+    sizeMax: 9.2,
+    brightnessMin: 0.28,
+    brightnessMax: 0.52,
+    twinkleAmp: 0.07,
     parallax: 4,
   },
   {
-    count: 3200,
+    count: 900,
     planeZ: 80,
     thickness: 180,
     sizeMin: 6.8,
-    sizeMax: 11,
-    brightnessMin: 0.85,
-    brightnessMax: 1.35,
-    twinkleAmp: 0.16,
+    sizeMax: 10.6,
+    brightnessMin: 0.38,
+    brightnessMax: 0.68,
+    twinkleAmp: 0.09,
     parallax: 9,
   },
   {
-    count: 1600,
+    count: 380,
     planeZ: 320,
     thickness: 120,
     sizeMin: 7.4,
-    sizeMax: 12.5,
-    brightnessMin: 1.05,
-    brightnessMax: 1.7,
-    twinkleAmp: 0.2,
+    sizeMax: 12.2,
+    brightnessMin: 0.52,
+    brightnessMax: 0.88,
+    twinkleAmp: 0.12,
     parallax: 16,
   },
   {
-    count: 90,
+    count: 36,
     planeZ: 460,
     thickness: 50,
     sizeMin: 10,
-    sizeMax: 16,
-    brightnessMin: 1.45,
-    brightnessMax: 2.05,
-    twinkleAmp: 0.07,
+    sizeMax: 15.5,
+    brightnessMin: 0.95,
+    brightnessMax: 1.4,
+    twinkleAmp: 0.05,
     parallax: 24,
   },
 ];
 
-const BAND_STAR_COUNT = 1800;
+const BAND_STAR_COUNT = 2000;
+
+/**
+ * Naked-eye spectral-class counts from the Yale Bright Star Catalogue,
+ * 5th Revised Ed. (Hoffleit & Warren 1991; CDS VizieR V/50). The
+ * catalogue lists 9110 entries complete to about V = 6.5. Class totals
+ * are the tabulated MK letters in the VizieR-derived BSC5 table
+ * (juliensimon/bright-star-catalog): O 51, B 1757, A 1963, F 1287,
+ * G 1145, K 2065, M 506 (8774 classified; the rest lack an O–M class).
+ * RGB is a desaturated naked-eye mapping of each class, not a new mix:
+ * O/B pale blue-white, A white, F cream, G pale yellow, K pale orange,
+ * M muted orange-red. Sampling uses the raw counts, not invented %.
+ */
+const BSC5_SPECTRAL_CLASSES = [
+  { count: 51, r: 0.84, g: 0.89, b: 1.0 },
+  { count: 1757, r: 0.88, g: 0.92, b: 1.0 },
+  { count: 1963, r: 0.96, g: 0.97, b: 1.0 },
+  { count: 1287, r: 1.0, g: 0.98, b: 0.92 },
+  { count: 1145, r: 1.0, g: 0.95, b: 0.82 },
+  { count: 2065, r: 1.0, g: 0.86, b: 0.7 },
+  { count: 506, r: 1.0, g: 0.72, b: 0.58 },
+] as const;
+
+const BSC5_CLASSIFIED_TOTAL = BSC5_SPECTRAL_CLASSES.reduce(
+  (sum, cls) => sum + cls.count,
+  0
+);
 
 export default function NightSky() {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -399,8 +425,7 @@ function fillStarAttributes(
   sizeMax: number,
   brightnessMin: number,
   brightnessMax: number,
-  twinkleAmp: number,
-  preferBandColor: boolean
+  twinkleAmp: number
 ) {
   const positions = new Float32Array(count * 3);
   const colors = new Float32Array(count * 3);
@@ -415,7 +440,7 @@ function fillStarAttributes(
     positions[idx + 1] = pos.y;
     positions[idx + 2] = pos.z;
 
-    pickStarColor(color, preferBandColor);
+    pickStarColor(color);
     const rank = Math.pow(Math.random(), 2.1);
     const brightness = brightnessMin + rank * (brightnessMax - brightnessMin);
     colors[idx] = color.r * brightness;
@@ -451,8 +476,7 @@ function createViewportStarLayer(
     config.sizeMax,
     config.brightnessMin,
     config.brightnessMax,
-    config.twinkleAmp,
-    false
+    config.twinkleAmp
   );
 
   const geometry = new deps.BufferGeometry();
@@ -500,12 +524,11 @@ function createBandStarLayer(
     deps.Color,
     BAND_STAR_COUNT,
     () => randomBandPosition(),
-    4.8,
-    9.2,
-    0.75,
-    1.25,
-    0.14,
-    true
+    5.4,
+    10.4,
+    0.9,
+    1.45,
+    0.16
   );
 
   const geometry = new deps.BufferGeometry();
@@ -600,8 +623,8 @@ function createMilkyWayBand(deps: {
         vec3 cool = vec3(0.68, 0.78, 1.0);
         vec3 warm = vec3(1.0, 0.86, 0.7);
         vec3 col = mix(cool, warm, smoothstep(0.3, 0.75, along));
-        float alpha = glow * 0.48;
-        gl_FragColor = vec4(col * glow * 1.25, alpha);
+        float alpha = glow * 0.62;
+        gl_FragColor = vec4(col * glow * 1.55, alpha);
       }
     `,
     transparent: true,
@@ -653,40 +676,25 @@ function rotateBandPoint(x: number, y: number, z: number) {
   };
 }
 
-function pickStarColor(color: import('three').Color, inBand: boolean) {
-  const roll = Math.random();
-  if (inBand) {
-    if (roll < 0.62) {
-      color.setHSL(
-        0.62,
-        0.08 + Math.random() * 0.1,
-        0.88 + Math.random() * 0.08
+function pickStarColor(color: import('three').Color) {
+  const roll = Math.random() * BSC5_CLASSIFIED_TOTAL;
+  let acc = 0;
+  for (const cls of BSC5_SPECTRAL_CLASSES) {
+    acc += cls.count;
+    if (roll < acc) {
+      const jitter = (Math.random() - 0.5) * 0.035;
+      color.setRGB(
+        clamp01(cls.r + jitter),
+        clamp01(cls.g + jitter * 0.6),
+        clamp01(cls.b + jitter * 0.4)
       );
       return;
     }
-    if (roll < 0.84) {
-      color.setHSL(
-        0.63,
-        0.32 + Math.random() * 0.22,
-        0.76 + Math.random() * 0.12
-      );
-      return;
-    }
-    color.setHSL(0.08, 0.28 + Math.random() * 0.2, 0.78 + Math.random() * 0.1);
-    return;
   }
+  const last = BSC5_SPECTRAL_CLASSES[BSC5_SPECTRAL_CLASSES.length - 1];
+  color.setRGB(last.r, last.g, last.b);
+}
 
-  if (roll < 0.5) {
-    color.setHSL(0.62, 0.04 + Math.random() * 0.08, 0.9 + Math.random() * 0.08);
-    return;
-  }
-  if (roll < 0.8) {
-    color.setHSL(
-      0.62,
-      0.34 + Math.random() * 0.28,
-      0.76 + Math.random() * 0.14
-    );
-    return;
-  }
-  color.setHSL(0.08, 0.32 + Math.random() * 0.28, 0.76 + Math.random() * 0.12);
+function clamp01(value: number) {
+  return Math.min(1, Math.max(0, value));
 }
