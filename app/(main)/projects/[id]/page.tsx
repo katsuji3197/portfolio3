@@ -4,6 +4,8 @@ import type { Metadata } from 'next';
 import { getProjectBySlug } from '@/lib/microcms';
 import { LOCAL_PROJECT_CONTENT } from '@/data/projects';
 import { formatYearMonth } from '@/lib/date-utils';
+import { htmlContainsMermaidBlock } from '@/lib/mermaid-blocks';
+import ProjectHtmlContent from '@/components/project-html-content';
 import { ArrowTopRightOnSquareIcon } from '@heroicons/react/24/outline';
 
 type PageProps = { params: Promise<{ id: string }> };
@@ -74,10 +76,14 @@ export default async function ProjectDetailPage({ params }: PageProps) {
             {LOCAL_PROJECT_CONTENT[project.id]}
           </div>
         ) : hasApiContent ? (
-          <div
-            className="prose-custom"
-            dangerouslySetInnerHTML={{ __html: project.content as string }}
-          />
+          htmlContainsMermaidBlock(project.content as string) ? (
+            <ProjectHtmlContent html={project.content as string} />
+          ) : (
+            <div
+              className="prose-custom"
+              dangerouslySetInnerHTML={{ __html: project.content as string }}
+            />
+          )
         ) : (
           <div>
             <p className="text-neutral-200 leading-7">{project.description}</p>
