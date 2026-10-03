@@ -40,7 +40,7 @@ export default async function Home() {
           </div>
         </div>
 
-        <div className="w-full h-[120vh] sm:h-[100vh] md:h-[120vh] fixed -z-10 left-0 top-[calc(50vh)] sm:top-[calc(50vh)] xl:top-[calc(50vh)] -translate-y-1/2 opacity-70 [@media(min-resolution:2dppx)]:top-[calc(0vh)] [@media(min-resolution:2dppx)]:-translate-y-[60%]">
+        <div className="fixed inset-0 -z-10 pointer-events-none opacity-70">
           <DNAHelix
             className="w-full h-full"
             radius={3.2}
@@ -48,6 +48,8 @@ export default async function Home() {
             turns={80}
             particleSize={0.112}
             rotationSpeed={-0.4}
+            startViewport={{ x: 0.02, y: 0.88 }}
+            endViewport={{ x: 0.9, y: 0.58 }}
           />
         </div>
 

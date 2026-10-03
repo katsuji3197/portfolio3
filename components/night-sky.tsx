@@ -1,12 +1,101 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { capDevicePixelRatio, startWebGLPlayback } from '@/lib/webgl-playback';
+
+const MAX_PIXEL_RATIO = 2;
+const CAMERA_Z = 600;
+const CAMERA_FOV = 70;
+
+type StarLayerConfig = {
+  count: number;
+  planeZ: number;
+  thickness: number;
+  sizeMin: number;
+  sizeMax: number;
+  brightnessMin: number;
+  brightnessMax: number;
+  twinkleAmp: number;
+  parallax: number;
+};
+
+const STAR_LAYERS: StarLayerConfig[] = [
+  {
+    count: 2000,
+    planeZ: -280,
+    thickness: 220,
+    sizeMin: 6.2,
+    sizeMax: 9.2,
+    brightnessMin: 0.2,
+    brightnessMax: 0.38,
+    twinkleAmp: 0.06,
+    parallax: 4,
+  },
+  {
+    count: 1100,
+    planeZ: 80,
+    thickness: 180,
+    sizeMin: 6.8,
+    sizeMax: 10.6,
+    brightnessMin: 0.26,
+    brightnessMax: 0.46,
+    twinkleAmp: 0.08,
+    parallax: 9,
+  },
+  {
+    count: 420,
+    planeZ: 320,
+    thickness: 120,
+    sizeMin: 7.4,
+    sizeMax: 12.2,
+    brightnessMin: 0.34,
+    brightnessMax: 0.58,
+    twinkleAmp: 0.1,
+    parallax: 16,
+  },
+  {
+    count: 40,
+    planeZ: 460,
+    thickness: 50,
+    sizeMin: 10,
+    sizeMax: 15.5,
+    brightnessMin: 0.62,
+    brightnessMax: 0.95,
+    twinkleAmp: 0.04,
+    parallax: 24,
+  },
+];
+
+const BAND_STAR_COUNT = 2200;
+
+/**
+ * Naked-eye spectral-class counts from the Yale Bright Star Catalogue,
+ * 5th Revised Ed. (Hoffleit & Warren 1991; CDS VizieR V/50). The
+ * catalogue lists 9110 entries complete to about V = 6.5. Class totals
+ * are the tabulated MK letters in the VizieR-derived BSC5 table
+ * (juliensimon/bright-star-catalog): O 51, B 1757, A 1963, F 1287,
+ * G 1145, K 2065, M 506 (8774 classified; the rest lack an O–M class).
+ * RGB is a desaturated naked-eye mapping of each class, not a new mix:
+ * O/B pale blue-white, A white, F cream, G pale yellow, K pale orange,
+ * M muted orange-red. Sampling uses the raw counts, not invented %.
+ */
+const BSC5_SPECTRAL_CLASSES = [
+  { count: 51, r: 0.84, g: 0.89, b: 1.0 },
+  { count: 1757, r: 0.88, g: 0.92, b: 1.0 },
+  { count: 1963, r: 0.96, g: 0.97, b: 1.0 },
+  { count: 1287, r: 1.0, g: 0.98, b: 0.92 },
+  { count: 1145, r: 1.0, g: 0.95, b: 0.82 },
+  { count: 2065, r: 1.0, g: 0.86, b: 0.7 },
+  { count: 506, r: 1.0, g: 0.72, b: 0.58 },
+] as const;
+
+const BSC5_CLASSIFIED_TOTAL = BSC5_SPECTRAL_CLASSES.reduce(
+  (sum, cls) => sum + cls.count,
+  0
+);
 
 export default function NightSky() {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const animationFrameIdRef = useRef<number | null>(null);
-  const prevTimeRef = useRef<number | null>(null);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -14,18 +103,28 @@ export default function NightSky() {
       return;
     }
 
-    let renderer: any = null;
-    let scene: any = null;
-    let layer1: any = null;
-    let layer2: any = null;
-    let layer3: any = null;
-    let milkyWay: any = null;
-    let circularTexture: any = null;
-    let shootingStars: any[] = [];
-    let onResize: any = null;
+    let disposed = false;
+    let stopPlayback: (() => void) | null = null;
+    let onResize: (() => void) | null = null;
+    let onPointerMove: ((event: PointerEvent) => void) | null = null;
+    let onPointerLeave: (() => void) | null = null;
+    let renderer: import('three').WebGLRenderer | null = null;
+    let milkyGeometry: import('three').BufferGeometry | null = null;
+    let milkyMaterial: import('three').ShaderMaterial | null = null;
+    let starTexture: import('three').Texture | null = null;
+    const starLayers: {
+      geometry: import('three').BufferGeometry;
+      material: import('three').ShaderMaterial;
+      group: import('three').Group;
+      parallax: number;
+    }[] = [];
 
-    (async () => {
+    const setup = async () => {
       const THREE = await import('three');
+      if (disposed || !containerRef.current) {
+        return;
+      }
+
       const {
         Scene,
         PerspectiveCamera,
@@ -33,564 +132,190 @@ export default function NightSky() {
         BufferGeometry,
         Float32BufferAttribute,
         Points,
-        PointsMaterial,
         ShaderMaterial,
         Color,
-        FogExp2,
         Group,
         AdditiveBlending,
-        Line,
-        LineBasicMaterial,
-        Vector3,
         Texture,
+        PlaneGeometry,
+        Mesh,
       } = THREE;
 
-      scene = new Scene();
+      const scene = new Scene();
       scene.background = null;
-      scene.fog = new FogExp2(new Color('#0a0f1f'), 0.0004);
 
-      const camera = new PerspectiveCamera(70, 1, 1, 5000);
-      camera.position.z = 600;
+      const camera = new PerspectiveCamera(CAMERA_FOV, 1, 1, 4000);
+      camera.position.z = CAMERA_Z;
 
-      renderer = new WebGLRenderer({ antialias: true, alpha: true });
+      renderer = new WebGLRenderer({
+        antialias: false,
+        alpha: true,
+        depth: true,
+        stencil: false,
+        premultipliedAlpha: false,
+      });
+      renderer.setClearColor(0x000000, 0);
+      renderer.toneMapping = THREE.NoToneMapping;
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
+
       const setRendererSize = () => {
+        if (!renderer) {
+          return;
+        }
         const width = window.innerWidth;
         const height = window.innerHeight;
         camera.aspect = width / height;
         camera.updateProjectionMatrix();
+        renderer.setPixelRatio(
+          capDevicePixelRatio(window.devicePixelRatio || 1)
+        );
         renderer.setSize(width, height, false);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+        const pixelRatio = Math.min(
+          window.devicePixelRatio || 1,
+          MAX_PIXEL_RATIO
+        );
+        for (const layer of starLayers) {
+          layer.material.uniforms.uPixelRatio.value = pixelRatio;
+        }
       };
+
       setRendererSize();
-      renderer.setClearColor(0x000000, 0); // 透明
+      renderer.domElement.style.position = 'absolute';
+      renderer.domElement.style.inset = '0';
+      renderer.domElement.style.width = '100%';
+      renderer.domElement.style.height = '100%';
       container.appendChild(renderer.domElement);
 
-      // 円形のテクスチャを作成
-      const createCircularTexture = () => {
-        const canvas = document.createElement('canvas');
-        canvas.width = 64;
-        canvas.height = 64;
-        const ctx = canvas.getContext('2d')!;
-
-        // 背景を透明にする
-        ctx.clearRect(0, 0, 64, 64);
-
-        // グラデーションで円形を作成
-        const gradient = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
-        gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
-        gradient.addColorStop(0.6, 'rgba(255, 255, 255, 0.9)');
-        gradient.addColorStop(0.8, 'rgba(255, 255, 255, 0.5)');
-        gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
-
-        ctx.fillStyle = gradient;
-        ctx.fillRect(0, 0, 64, 64);
-
-        const texture = new Texture(canvas);
-        texture.needsUpdate = true;
-        return texture;
-      };
-
-      circularTexture = createCircularTexture();
-
+      starTexture = createSoftStarTexture(Texture);
       const root = new Group();
       scene.add(root);
 
-      // 星の生成
-      const createStars = (
-        count: number,
-        color: string,
-        size: number,
-        spread: number
-      ) => {
-        const geometry = new BufferGeometry();
-        const positions = new Float32Array(count * 3);
-        const colors = new Float32Array(count * 3);
-        const starts = new Float32Array(count);
-        const maxDelay = 3.0; // 各星のフェードイン最大遅延（秒）
-        for (let i = 0; i < count; i += 1) {
-          // 球殻状に分布させる
-          const radius = spread * (0.6 + Math.random() * 0.4);
-          const theta = Math.acos(2 * Math.random() - 1);
-          const phi = 2 * Math.PI * Math.random();
-          const x = radius * Math.sin(theta) * Math.cos(phi);
-          const y = radius * Math.sin(theta) * Math.sin(phi);
-          const z = radius * Math.cos(theta);
-          const idx = i * 3;
-          positions[idx] = x;
-          positions[idx + 1] = y;
-          positions[idx + 2] = z;
-
-          // 色を確率で決定: 5% コーラル, 5% コーンフラワーブルー, それ以外はデフォルト色
-          let chosen = new Color(color);
-          const r = Math.random();
-          if (r < 0.05) {
-            chosen = new Color('#ff7f50');
-          } else if (r < 0.1) {
-            chosen = new Color('#6495ed');
-          }
-          colors[idx] = chosen.r;
-          colors[idx + 1] = chosen.g;
-          colors[idx + 2] = chosen.b;
-
-          // 各星のフェードイン開始時刻をランダム化
-          starts[i] = Math.random() * maxDelay;
-        }
-        geometry.setAttribute(
-          'position',
-          new Float32BufferAttribute(positions, 3)
-        );
-        geometry.setAttribute('aColor', new Float32BufferAttribute(colors, 3));
-        geometry.setAttribute('aStart', new Float32BufferAttribute(starts, 1));
-
-        // シェーダで個別にフェードインさせる
-        const material = new ShaderMaterial({
-          uniforms: {
-            uTime: { value: 0 },
-            uFadeDuration: { value: 1.2 },
-            // サイズを2倍に
-            uSize: { value: size * 1.2 * 2 },
-            map: { value: circularTexture },
-          },
-          vertexShader: `
-            attribute vec3 aColor;
-            attribute float aStart;
-            varying vec3 vColor;
-            varying float vAlpha;
-            uniform float uTime;
-            uniform float uFadeDuration;
-            uniform float uSize;
-            void main() {
-              vColor = aColor;
-              float t = clamp((uTime - aStart) / uFadeDuration, 0.0, 1.0);
-              vAlpha = pow(t, 1.2);
-              vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-              gl_PointSize = uSize * (300.0 / -mvPosition.z);
-              gl_Position = projectionMatrix * mvPosition;
-            }
-          `,
-          fragmentShader: `
-            varying vec3 vColor;
-            varying float vAlpha;
-            uniform sampler2D map;
-            void main() {
-              vec4 tex = texture2D(map, gl_PointCoord);
-              float alpha = tex.a * vAlpha;
-              if (alpha < 0.01) discard;
-              // 明るさを3倍に
-              gl_FragColor = vec4(vColor * tex.rgb * 2.0, alpha);
-            }
-          `,
-          transparent: true,
-          depthWrite: false,
-          blending: AdditiveBlending,
-          alphaTest: 0.01,
-        });
-
-        const points = new Points(geometry, material as any);
-        return { points, geometry, material };
+      const sharedDeps = {
+        BufferGeometry,
+        Float32BufferAttribute,
+        Points,
+        ShaderMaterial,
+        Color,
+        AdditiveBlending,
+        Group,
       };
 
-      // --- ここから天の川の生成 ---
-      const createMilkyWay = (count: number, color: string, size: number) => {
-        const geometry = new BufferGeometry();
-        const positions = new Float32Array(count * 3);
-        const colors = new Float32Array(count * 3);
-        const starts = new Float32Array(count);
-
-        const bandWidth = 200;
-        const bandLength = 12000;
-        const thickness = 600;
-        const maxDelay = 4.0;
-
-        for (let i = 0; i < count; i++) {
-          // 帯状の領域に星を配置
-          const x = (Math.random() - 0.7) * bandLength;
-          // yとzで楕円形の断面を表現し、中心部の密度を高くする
-          const u = Math.random() * 1 * Math.PI;
-          const r = Math.sqrt(Math.random()); // 中心に寄せるための平方根
-          const y = r * Math.cos(u) * (bandWidth / 2);
-          const z = r * Math.sin(u) * (thickness / 2);
-
-          const idx = i * 3;
-          positions[idx] = x;
-          positions[idx + 1] = y;
-          positions[idx + 2] = z;
-
-          // 天の川の色合いを調整（青白く、時々黄色）
-          let chosen = new Color(color);
-          const rand = Math.random();
-          if (rand < 0.1) {
-            chosen = new Color('#a2b8ff'); // 淡い青
-          } else if (rand < 0.15) {
-            chosen = new Color('#fff4d8'); // 淡い黄
-          }
-          colors[idx] = chosen.r;
-          colors[idx + 1] = chosen.g;
-          colors[idx + 2] = chosen.b;
-
-          starts[i] = Math.random() * maxDelay;
-        }
-
-        geometry.setAttribute(
-          'position',
-          new Float32BufferAttribute(positions, 3)
-        );
-        geometry.setAttribute('aColor', new Float32BufferAttribute(colors, 3));
-        geometry.setAttribute('aStart', new Float32BufferAttribute(starts, 1));
-
-        const material = new ShaderMaterial({
-          uniforms: {
-            uTime: { value: 0 },
-            uFadeDuration: { value: 2.2 },
-            uSize: { value: size * 1.1 * 2 },
-            map: { value: circularTexture },
-          },
-          vertexShader: `
-            attribute vec3 aColor;
-            attribute float aStart;
-            varying vec3 vColor;
-            varying float vAlpha;
-            uniform float uTime;
-            uniform float uFadeDuration;
-            uniform float uSize;
-            void main() {
-              vColor = aColor;
-              float t = clamp((uTime - aStart) / uFadeDuration, 0.0, 1.0);
-              vAlpha = pow(t, 1.1);
-              vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-              gl_PointSize = uSize * (300.0 / -mvPosition.z);
-              gl_Position = projectionMatrix * mvPosition;
-            }
-          `,
-          fragmentShader: `
-            varying vec3 vColor;
-            varying float vAlpha;
-            uniform sampler2D map;
-            void main() {
-              vec4 tex = texture2D(map, gl_PointCoord);
-              float alpha = tex.a * vAlpha * 0.9;
-              if (alpha < 0.01) discard;
-              // 明るさを3倍に
-              gl_FragColor = vec4(vColor * tex.rgb * 2.0, alpha);
-            }
-          `,
-          transparent: true,
-          depthWrite: false,
-          blending: AdditiveBlending,
-          alphaTest: 0.01,
-        });
-
-        const points = new Points(geometry, material as any);
-        return { points, geometry, material };
-      };
-      // --- ここまで天の川の生成 ---
-
-      layer1 = createStars(8000, '#eaf2ff', 2.0, 950);
-      layer2 = createStars(7600, '#d9e6ff', 3.0, 1400);
-      layer3 = createStars(5600, '#ffffff', 4.0, 1700);
-
-      // ShaderMaterial の uniform を初期化
-      const initLayerUniforms = (layer: any, fadeDuration = 1.2) => {
-        if (layer && layer.material && (layer.material as any).uniforms) {
-          (layer.material as any).uniforms.uTime.value = 0;
-          (layer.material as any).uniforms.uFadeDuration.value = fadeDuration;
-          (layer.material as any).uniforms.map.value = circularTexture;
-        }
-      };
-      initLayerUniforms(layer1, 0.9);
-      initLayerUniforms(layer2, 1.4);
-      initLayerUniforms(layer3, 2.0);
-
-      // 天の川を生成してシーンに追加
-      milkyWay = createMilkyWay(28000, '#ffffff', 1.0);
-      // 天の川を斜めに傾ける
-      milkyWay.points.rotation.x = Math.PI / 6;
-      milkyWay.points.rotation.z = -Math.PI / 6;
-
-      root.add(layer1.points);
-      root.add(layer2.points);
-      root.add(layer3.points);
-      root.add(milkyWay.points); // シーンに天の川を追加
-
-      // 流れ星（Shooting Stars）
-      type ShootingStar = {
-        group: any;
-        head: any;
-        headMaterial: any;
-        tail: any;
-        tailMaterial: any;
-        tailPositions: any[];
-        velocity: any;
-        age: number;
-        life: number;
-        active: boolean;
-      };
-
-      const maxShootingStars = 1024;
-      const tailSegments = 30;
-      shootingStars = [];
-
-      const makeShootingStar = (): ShootingStar => {
-        // head
-        const headGeometry = new BufferGeometry();
-        headGeometry.setAttribute(
-          'position',
-          new Float32BufferAttribute(new Float32Array([0, 0, 0]), 3)
-        );
-        const headMaterial = new PointsMaterial({
-          color: new Color('#a2b8ff'),
-          size: 2.0 * 2.0,
-          transparent: true,
-          opacity: 0.4,
-          depthWrite: false,
-          blending: AdditiveBlending,
-          sizeAttenuation: true,
-          map: circularTexture,
-          alphaTest: 0.1,
-        });
-        const head = new Points(headGeometry, headMaterial);
-
-        // tail
-        const tailGeometry = new BufferGeometry();
-        const initialTail = new Float32Array(tailSegments * 3).fill(0);
-        tailGeometry.setAttribute(
-          'position',
-          new Float32BufferAttribute(initialTail, 3)
-        );
-        const initialColors = new Float32Array(tailSegments * 3);
-        for (let i = 0; i < tailSegments; i += 1) {
-          const attenuation = Math.pow(0.85, i);
-          const idx = i * 3;
-          initialColors[idx] = attenuation;
-          initialColors[idx + 1] = attenuation;
-          initialColors[idx + 2] = attenuation;
-        }
-        tailGeometry.setAttribute(
-          'color',
-          new Float32BufferAttribute(initialColors, 3)
-        );
-        const tailMaterial = new LineBasicMaterial({
-          color: 0xa2b8ff,
-          transparent: true,
-          opacity: 0.1,
-          blending: AdditiveBlending,
-          vertexColors: true,
-        });
-        const tail = new Line(tailGeometry, tailMaterial);
-
-        const group = new Group();
-        group.add(tail);
-        group.add(head);
-
-        return {
-          group,
-          head,
-          headMaterial,
-          tail,
-          tailMaterial,
-          tailPositions: Array.from(
-            { length: tailSegments },
-            () => new Vector3(0, 0, 0)
-          ),
-          velocity: new Vector3(0, 0, 0),
-          age: 0,
-          life: 48,
-          active: false,
-        };
-      };
-
-      const activateShootingStar = (star: ShootingStar) => {
-        // 画面右上付近から左下方向へ
-        const startX = 900 + Math.random() * 400;
-        const startY = 700 + Math.random() * 400;
-        const startZ = -100 + Math.random() * 200;
-        star.group.position.set(startX, startY, startZ);
-        star.velocity.set(
-          -200 - Math.random() * 10,
-          -133 - Math.random() * 5,
-          0
-        );
-        star.age = 0;
-        star.life = 8 + Math.random() * 41;
-        star.active = true;
-        star.headMaterial.opacity = 0.8;
-        star.tailMaterial.opacity = 0.7;
-
-        star.tailPositions.forEach((p: any) => p.set(0, 0, 0));
-        updateTailGeometry(star, 1.0);
-
-        if (scene.children.indexOf(star.group) === -1) {
-          scene.add(star.group);
-        }
-      };
-
-      const deactivateShootingStar = (star: ShootingStar) => {
-        star.active = false;
-        star.headMaterial.opacity = 0.2;
-        star.tailMaterial.opacity = 0.2;
-        if (scene.children.indexOf(star.group) !== -1) {
-          scene.remove(star.group);
-        }
-      };
-
-      const updateTailGeometry = (star: ShootingStar, fade: number) => {
-        const positionAttr = star.tail.geometry.getAttribute('position') as any;
-        const colorAttr = star.tail.geometry.getAttribute('color') as any;
-        for (let i = 0; i < tailSegments; i += 1) {
-          const p = star.tailPositions[i];
-          positionAttr.setXYZ(i, p.x, p.y, p.z);
-          const attenuation = fade * Math.pow(0.85, i);
-          colorAttr.setXYZ(i, attenuation, attenuation, attenuation);
-        }
-        positionAttr.needsUpdate = true;
-        colorAttr.needsUpdate = true;
-      };
-
-      // プールを準備
-      for (let i = 0; i < maxShootingStars; i += 1) {
-        shootingStars.push(makeShootingStar());
+      for (const config of STAR_LAYERS) {
+        const layer = createViewportStarLayer(sharedDeps, starTexture, config);
+        starLayers.push(layer);
+        root.add(layer.group);
       }
 
-      // アニメーション
-      const startTime = performance.now();
-      const animate = () => {
-        const now = performance.now();
-        const elapsed = (now - startTime) / 1000;
-        const prev = prevTimeRef.current;
-        const dt = prev === null ? 0 : Math.min(0.05, (now - prev) / 1000);
-        prevTimeRef.current = now;
+      const bandLayer = createBandStarLayer(sharedDeps, starTexture);
+      starLayers.push(bandLayer);
+      root.add(bandLayer.group);
 
-        // ゆっくりと回転
-        root.rotation.y = elapsed * 0.01;
-        root.rotation.x = Math.sin(elapsed * 0.08) * 0.05;
+      const milkyWay = createMilkyWayBand({
+        PlaneGeometry,
+        ShaderMaterial,
+        Mesh,
+        AdditiveBlending,
+        Group,
+        DoubleSide: THREE.DoubleSide,
+      });
+      milkyGeometry = milkyWay.geometry;
+      milkyMaterial = milkyWay.material;
+      root.add(milkyWay.group);
 
-        // パララックス風に各レイヤーを微妙に動かす
-        layer1.points.rotation.y += 0.0002;
-        layer2.points.rotation.y += 0.00007;
-        layer3.points.rotation.y += 0.00002;
-        milkyWay.points.rotation.x += 0.00008; // 天の川もゆっくり回転
+      setRendererSize();
 
-        // カメラのゆるいドリフト
-        camera.position.x = Math.sin(elapsed * 0.15) * 10;
-        camera.position.y = Math.cos(elapsed * 0.12) * 6;
-        camera.lookAt(0, 0, 0);
+      let elapsed = 0;
+      let pointerTargetX = 0;
+      let pointerTargetY = 0;
+      let pointerX = 0;
+      let pointerY = 0;
+      const pointerEase = 3.2;
+      const yawRange = 0.055;
+      const pitchRange = 0.035;
+      const panX = 16;
+      const panY = 10;
 
-        // 流れ星のスポーン（確率的）
-        if (dt > 0) {
-          const shouldSpawn = Math.random() < 1.2 * dt; // 平均1秒に1回程度
-          if (shouldSpawn) {
-            const candidate = shootingStars.find(s => !s.active);
-            if (candidate) {
-              activateShootingStar(candidate);
-            }
-          }
+      onPointerMove = (event: PointerEvent) => {
+        if (event.pointerType !== 'mouse') {
+          return;
+        }
+        const width = window.innerWidth || 1;
+        const height = window.innerHeight || 1;
+        pointerTargetX = (event.clientX / width) * 2 - 1;
+        pointerTargetY = -((event.clientY / height) * 2 - 1);
+      };
+      onPointerLeave = () => {
+        pointerTargetX = 0;
+        pointerTargetY = 0;
+      };
+      window.addEventListener('pointermove', onPointerMove, { passive: true });
+      document.documentElement.addEventListener('mouseleave', onPointerLeave);
+
+      const renderFrame = (dt: number) => {
+        if (!renderer || !milkyMaterial) {
+          return;
         }
 
-        // 流れ星の更新
-        for (const star of shootingStars) {
-          if (!star.active || dt === 0) continue;
-          star.age += dt;
+        elapsed += dt;
+        const follow = 1 - Math.exp(-pointerEase * dt);
+        pointerX += (pointerTargetX - pointerX) * follow;
+        pointerY += (pointerTargetY - pointerY) * follow;
 
-          const deltaMove = star.velocity.clone().multiplyScalar(dt);
-          star.group.position.add(deltaMove);
-          star.tailPositions.forEach((p: any) => p.sub(deltaMove));
-          star.tailPositions.pop();
-          star.tailPositions.unshift(new Vector3(0, 0, 0));
+        root.rotation.y = elapsed * 0.008 + pointerX * yawRange;
+        root.rotation.x =
+          Math.sin(elapsed * 0.05) * 0.04 - pointerY * pitchRange;
+        camera.position.x = Math.sin(elapsed * 0.12) * 8 + pointerX * panX;
+        camera.position.y = Math.cos(elapsed * 0.1) * 5 + pointerY * panY;
+        camera.lookAt(pointerX * 6, pointerY * 4, 0);
 
-          const fade = Math.max(0, 1 - star.age / star.life);
-          star.headMaterial.opacity = 0.9 * fade;
-          star.tailMaterial.opacity = 0.8 * fade;
-
-          updateTailGeometry(star, fade);
-
-          const outOfBounds =
-            star.group.position.x < -1500 ||
-            star.group.position.y < -1200 ||
-            star.group.position.x > 1500 ||
-            star.group.position.y > 1200;
-          if (star.age > star.life || outOfBounds) {
-            deactivateShootingStar(star);
-          }
+        for (const layer of starLayers) {
+          layer.group.position.x = pointerX * layer.parallax;
+          layer.group.position.y = pointerY * layer.parallax;
+          layer.material.uniforms.uTime.value = elapsed;
         }
-
-        // シェーダを使っている各レイヤーの時間を更新
-        try {
-          if (layer1 && layer1.material && (layer1.material as any).uniforms) {
-            (layer1.material as any).uniforms.uTime.value = elapsed;
-          }
-          if (layer2 && layer2.material && (layer2.material as any).uniforms) {
-            (layer2.material as any).uniforms.uTime.value = elapsed;
-          }
-          if (layer3 && layer3.material && (layer3.material as any).uniforms) {
-            (layer3.material as any).uniforms.uTime.value = elapsed;
-          }
-          if (
-            milkyWay &&
-            milkyWay.material &&
-            (milkyWay.material as any).uniforms
-          ) {
-            (milkyWay.material as any).uniforms.uTime.value = elapsed;
-          }
-        } catch {
-          // ignore
-        }
-
+        milkyMaterial.uniforms.uTime.value = elapsed;
         renderer.render(scene, camera);
-        animationFrameIdRef.current = requestAnimationFrame(animate);
       };
-      animationFrameIdRef.current = requestAnimationFrame(animate);
 
-      onResize = () => {
-        setRendererSize();
-      };
+      renderFrame(0);
+
+      stopPlayback = startWebGLPlayback(container, (_now, dt) => {
+        renderFrame(dt);
+      });
+
+      onResize = setRendererSize;
       window.addEventListener('resize', onResize);
-    })();
+    };
+
+    void setup();
 
     return () => {
-      if (animationFrameIdRef.current !== null) {
-        cancelAnimationFrame(animationFrameIdRef.current);
+      disposed = true;
+      stopPlayback?.();
+      if (onResize) {
+        window.removeEventListener('resize', onResize);
       }
-      if (onResize) window.removeEventListener('resize', onResize);
-      // 流れ星の破棄
-      try {
-        for (const star of shootingStars) {
-          if (
-            scene &&
-            scene.children &&
-            scene.children.indexOf(star.group) !== -1
-          ) {
-            scene.remove(star.group);
-          }
-          if (star.head && star.head.geometry) star.head.geometry.dispose();
-          if (star.headMaterial) star.headMaterial.dispose();
-          if (star.tail && star.tail.geometry) star.tail.geometry.dispose();
-          if (star.tailMaterial) star.tailMaterial.dispose();
+      if (onPointerMove) {
+        window.removeEventListener('pointermove', onPointerMove);
+      }
+      if (onPointerLeave) {
+        document.documentElement.removeEventListener(
+          'mouseleave',
+          onPointerLeave
+        );
+      }
+      for (const layer of starLayers) {
+        layer.geometry.dispose();
+        layer.material.dispose();
+      }
+      milkyGeometry?.dispose();
+      milkyMaterial?.dispose();
+      starTexture?.dispose();
+      if (renderer) {
+        renderer.dispose();
+        if (renderer.domElement && container.contains(renderer.domElement)) {
+          container.removeChild(renderer.domElement);
         }
-        if (layer1) {
-          layer1.geometry.dispose();
-          layer1.material.dispose();
-        }
-        if (layer2) {
-          layer2.geometry.dispose();
-          layer2.material.dispose();
-        }
-        if (layer3) {
-          layer3.geometry.dispose();
-          layer3.material.dispose();
-        }
-        if (milkyWay) {
-          milkyWay.geometry.dispose();
-          milkyWay.material.dispose();
-        }
-        if (circularTexture) circularTexture.dispose();
-        if (renderer) {
-          renderer.dispose();
-          if (renderer.domElement && container.contains(renderer.domElement)) {
-            container.removeChild(renderer.domElement);
-          }
-        }
-      } catch {
-        // safe cleanup
       }
     };
   }, []);
@@ -598,11 +323,378 @@ export default function NightSky() {
   return (
     <div
       ref={containerRef}
-      className="fixed inset-0 -z-10 pointer-events-none opacity-80"
+      className="fixed inset-0 -z-10 pointer-events-none overflow-hidden opacity-65"
       style={{
         background:
           'radial-gradient(1000px 600px at 50% 120%, #0b1226 0%, #070b18 35%, #050912 70%, #03060d 100%)',
       }}
     />
   );
+}
+
+function createSoftStarTexture(
+  TextureCtor: typeof import('three').Texture
+): import('three').Texture {
+  const size = 32;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d')!;
+  const gradient = ctx.createRadialGradient(
+    size / 2,
+    size / 2,
+    0,
+    size / 2,
+    size / 2,
+    size / 2
+  );
+  gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
+  gradient.addColorStop(0.35, 'rgba(255, 255, 255, 0.55)');
+  gradient.addColorStop(0.7, 'rgba(255, 255, 255, 0.12)');
+  gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, size, size);
+
+  const texture = new TextureCtor(canvas);
+  texture.needsUpdate = true;
+  return texture;
+}
+
+function createStarMaterial(
+  ShaderMaterial: typeof import('three').ShaderMaterial,
+  AdditiveBlending: typeof import('three').AdditiveBlending,
+  map: import('three').Texture
+) {
+  return new ShaderMaterial({
+    uniforms: {
+      uTime: { value: 0 },
+      uPixelRatio: {
+        value: Math.min(
+          typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1,
+          MAX_PIXEL_RATIO
+        ),
+      },
+      map: { value: map },
+    },
+    vertexShader: `
+      attribute vec3 aColor;
+      attribute float aSize;
+      attribute vec3 aTwinkle;
+      varying vec3 vColor;
+      varying float vAlpha;
+      uniform float uTime;
+      uniform float uPixelRatio;
+
+      void main() {
+        vColor = aColor;
+        float twinkle = 0.82 + aTwinkle.z * sin(uTime * aTwinkle.y + aTwinkle.x);
+        vAlpha = clamp(twinkle, 0.45, 1.25);
+        vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+        gl_PointSize = max(
+          aSize * uPixelRatio * (300.0 / max(-mvPosition.z, 80.0)),
+          1.8 * uPixelRatio
+        );
+        gl_Position = projectionMatrix * mvPosition;
+      }
+    `,
+    fragmentShader: `
+      varying vec3 vColor;
+      varying float vAlpha;
+      uniform sampler2D map;
+
+      void main() {
+        vec4 tex = texture2D(map, gl_PointCoord);
+        float alpha = tex.a * vAlpha;
+        if (alpha < 0.02) discard;
+        gl_FragColor = vec4(vColor * tex.rgb * 2.0, alpha);
+      }
+    `,
+    transparent: true,
+    depthWrite: false,
+    depthTest: false,
+    blending: AdditiveBlending,
+    toneMapped: false,
+  });
+}
+
+function fillStarAttributes(
+  ColorCtor: typeof import('three').Color,
+  count: number,
+  place: (index: number) => { x: number; y: number; z: number },
+  sizeMin: number,
+  sizeMax: number,
+  brightnessMin: number,
+  brightnessMax: number,
+  twinkleAmp: number
+) {
+  const positions = new Float32Array(count * 3);
+  const colors = new Float32Array(count * 3);
+  const sizes = new Float32Array(count);
+  const twinkles = new Float32Array(count * 3);
+  const color = new ColorCtor();
+
+  for (let i = 0; i < count; i += 1) {
+    const pos = place(i);
+    const idx = i * 3;
+    positions[idx] = pos.x;
+    positions[idx + 1] = pos.y;
+    positions[idx + 2] = pos.z;
+
+    pickStarColor(color);
+    const rank = Math.pow(Math.random(), 2.1);
+    const brightness = brightnessMin + rank * (brightnessMax - brightnessMin);
+    colors[idx] = color.r * brightness;
+    colors[idx + 1] = color.g * brightness;
+    colors[idx + 2] = color.b * brightness;
+    sizes[i] = sizeMin + rank * (sizeMax - sizeMin);
+    twinkles[idx] = Math.random() * Math.PI * 2;
+    twinkles[idx + 1] = 0.2 + Math.random() * 0.75;
+    twinkles[idx + 2] = twinkleAmp * (0.65 + (1 - rank) * 0.7);
+  }
+
+  return { positions, colors, sizes, twinkles };
+}
+
+function createViewportStarLayer(
+  deps: {
+    BufferGeometry: typeof import('three').BufferGeometry;
+    Float32BufferAttribute: typeof import('three').Float32BufferAttribute;
+    Points: typeof import('three').Points;
+    ShaderMaterial: typeof import('three').ShaderMaterial;
+    Color: typeof import('three').Color;
+    AdditiveBlending: typeof import('three').AdditiveBlending;
+    Group: typeof import('three').Group;
+  },
+  map: import('three').Texture,
+  config: StarLayerConfig
+) {
+  const attrs = fillStarAttributes(
+    deps.Color,
+    config.count,
+    () => randomViewportPosition(config.planeZ, config.thickness),
+    config.sizeMin,
+    config.sizeMax,
+    config.brightnessMin,
+    config.brightnessMax,
+    config.twinkleAmp
+  );
+
+  const geometry = new deps.BufferGeometry();
+  geometry.setAttribute(
+    'position',
+    new deps.Float32BufferAttribute(attrs.positions, 3)
+  );
+  geometry.setAttribute(
+    'aColor',
+    new deps.Float32BufferAttribute(attrs.colors, 3)
+  );
+  geometry.setAttribute(
+    'aSize',
+    new deps.Float32BufferAttribute(attrs.sizes, 1)
+  );
+  geometry.setAttribute(
+    'aTwinkle',
+    new deps.Float32BufferAttribute(attrs.twinkles, 3)
+  );
+
+  const material = createStarMaterial(
+    deps.ShaderMaterial,
+    deps.AdditiveBlending,
+    map
+  );
+  const points = new deps.Points(geometry, material);
+  const group = new deps.Group();
+  group.add(points);
+  return { geometry, material, group, parallax: config.parallax };
+}
+
+function createBandStarLayer(
+  deps: {
+    BufferGeometry: typeof import('three').BufferGeometry;
+    Float32BufferAttribute: typeof import('three').Float32BufferAttribute;
+    Points: typeof import('three').Points;
+    ShaderMaterial: typeof import('three').ShaderMaterial;
+    Color: typeof import('three').Color;
+    AdditiveBlending: typeof import('three').AdditiveBlending;
+    Group: typeof import('three').Group;
+  },
+  map: import('three').Texture
+) {
+  const attrs = fillStarAttributes(
+    deps.Color,
+    BAND_STAR_COUNT,
+    () => randomBandPosition(),
+    4.8,
+    8.8,
+    0.55,
+    0.95,
+    0.12
+  );
+
+  const geometry = new deps.BufferGeometry();
+  geometry.setAttribute(
+    'position',
+    new deps.Float32BufferAttribute(attrs.positions, 3)
+  );
+  geometry.setAttribute(
+    'aColor',
+    new deps.Float32BufferAttribute(attrs.colors, 3)
+  );
+  geometry.setAttribute(
+    'aSize',
+    new deps.Float32BufferAttribute(attrs.sizes, 1)
+  );
+  geometry.setAttribute(
+    'aTwinkle',
+    new deps.Float32BufferAttribute(attrs.twinkles, 3)
+  );
+
+  const material = createStarMaterial(
+    deps.ShaderMaterial,
+    deps.AdditiveBlending,
+    map
+  );
+  const points = new deps.Points(geometry, material);
+  const group = new deps.Group();
+  group.add(points);
+  return { geometry, material, group, parallax: 7 };
+}
+
+function createMilkyWayBand(deps: {
+  PlaneGeometry: typeof import('three').PlaneGeometry;
+  ShaderMaterial: typeof import('three').ShaderMaterial;
+  Mesh: typeof import('three').Mesh;
+  AdditiveBlending: typeof import('three').AdditiveBlending;
+  Group: typeof import('three').Group;
+  DoubleSide: import('three').Side;
+}) {
+  const geometry = new deps.PlaneGeometry(3200, 780, 1, 1);
+  const material = new deps.ShaderMaterial({
+    uniforms: {
+      uTime: { value: 0 },
+    },
+    vertexShader: `
+      varying vec2 vUv;
+      void main() {
+        vUv = uv;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: `
+      varying vec2 vUv;
+      uniform float uTime;
+
+      float hash(vec2 p) {
+        return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
+      }
+
+      float noise(vec2 p) {
+        vec2 i = floor(p);
+        vec2 f = fract(p);
+        float a = hash(i);
+        float b = hash(i + vec2(1.0, 0.0));
+        float c = hash(i + vec2(0.0, 1.0));
+        float d = hash(i + vec2(1.0, 1.0));
+        vec2 u = f * f * (3.0 - 2.0 * f);
+        return mix(a, b, u.x) + (c - a) * u.y * (1.0 - u.x) + (d - b) * u.x * u.y;
+      }
+
+      float fbm(vec2 p) {
+        float value = 0.0;
+        float amp = 0.5;
+        for (int i = 0; i < 5; i++) {
+          value += amp * noise(p);
+          p *= 2.05;
+          amp *= 0.55;
+        }
+        return value;
+      }
+
+      void main() {
+        vec2 uv = vUv * 2.0 - 1.0;
+        float core = exp(-pow(uv.y * 2.15, 2.0));
+        float halo = exp(-pow(uv.y * 0.85, 2.0)) * 0.62;
+        float along = 0.5 + 0.5 * fbm(vec2(uv.x * 2.6, uv.y * 4.2 + uTime * 0.012));
+        float lanes = smoothstep(0.22, 0.8, fbm(vec2(uv.x * 5.1 + 8.0, uv.y * 1.7)));
+        float glow = (core + halo) * along * mix(0.5, 1.0, lanes);
+        float edge = smoothstep(1.0, 0.28, abs(uv.x));
+        glow *= edge;
+
+        vec3 cool = vec3(0.68, 0.78, 1.0);
+        vec3 warm = vec3(1.0, 0.86, 0.7);
+        vec3 col = mix(cool, warm, smoothstep(0.3, 0.75, along));
+        float alpha = glow * 0.48;
+        gl_FragColor = vec4(col * glow * 1.25, alpha);
+      }
+    `,
+    transparent: true,
+    depthWrite: false,
+    depthTest: false,
+    blending: deps.AdditiveBlending,
+    toneMapped: false,
+    side: deps.DoubleSide,
+  });
+
+  const mesh = new deps.Mesh(geometry, material);
+  const group = new deps.Group();
+  group.add(mesh);
+  group.rotation.x = Math.PI / 6;
+  group.rotation.z = -Math.PI / 6;
+  return { group, geometry, material };
+}
+
+function randomViewportPosition(planeZ: number, thickness: number) {
+  const dist = Math.max(CAMERA_Z - planeZ, 80);
+  const halfHeight =
+    Math.tan(((CAMERA_FOV * Math.PI) / 180) * 0.5) * dist * 1.55;
+  const halfWidth = halfHeight * 2.35;
+  return {
+    x: (Math.random() * 2 - 1) * halfWidth,
+    y: (Math.random() * 2 - 1) * halfHeight,
+    z: planeZ + (Math.random() - 0.5) * thickness,
+  };
+}
+
+function randomBandPosition() {
+  const x = (Math.random() - 0.5) * 2500;
+  const u = Math.random() * Math.PI * 2;
+  const r = Math.pow(Math.random(), 0.42);
+  const y = r * Math.cos(u) * 62;
+  const z = r * Math.sin(u) * 130;
+  return rotateBandPoint(x, y, z);
+}
+
+function rotateBandPoint(x: number, y: number, z: number) {
+  const rx = Math.PI / 6;
+  const rz = -Math.PI / 6;
+  const y1 = y * Math.cos(rx) - z * Math.sin(rx);
+  const z1 = y * Math.sin(rx) + z * Math.cos(rx);
+  return {
+    x: x * Math.cos(rz) - y1 * Math.sin(rz),
+    y: x * Math.sin(rz) + y1 * Math.cos(rz),
+    z: z1,
+  };
+}
+
+function pickStarColor(color: import('three').Color) {
+  const roll = Math.random() * BSC5_CLASSIFIED_TOTAL;
+  let acc = 0;
+  for (const cls of BSC5_SPECTRAL_CLASSES) {
+    acc += cls.count;
+    if (roll < acc) {
+      const jitter = (Math.random() - 0.5) * 0.035;
+      color.setRGB(
+        clamp01(cls.r + jitter),
+        clamp01(cls.g + jitter * 0.6),
+        clamp01(cls.b + jitter * 0.4)
+      );
+      return;
+    }
+  }
+  const last = BSC5_SPECTRAL_CLASSES[BSC5_SPECTRAL_CLASSES.length - 1];
+  color.setRGB(last.r, last.g, last.b);
+}
+
+function clamp01(value: number) {
+  return Math.min(1, Math.max(0, value));
 }

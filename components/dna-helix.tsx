@@ -9,25 +9,33 @@ import {
   PerspectiveCamera,
   Points,
   PointsMaterial,
+  Quaternion,
   Vector3,
   Scene,
   WebGLRenderer,
 } from 'three';
+import { capDevicePixelRatio, startWebGLPlayback } from '@/lib/webgl-playback';
 
 type DNAHelixProps = {
   className?: string;
   style?: React.CSSProperties;
-  radius?: number; // らせん半径
-  height?: number; // 全高（y方向）
-  turns?: number; // 巻き数
-  segmentsPerTurn?: number; // 1回転あたりの分割数
-  baseEvery?: number; // 何セグメントごとに塩基（横棒）を描画するか
-  rotationSpeed?: number; // 回転速度(rad/sec)
-  particleSize?: number; // 粒子サイズ（px）
-  particleColor?: string; // 粒子色
-  baseSegmentsPerPair?: number; // 各塩基対を粒子で分割表示する数
-  tiltDeg?: number; // 右傾き（度）
+  radius?: number;
+  height?: number;
+  turns?: number;
+  segmentsPerTurn?: number;
+  baseEvery?: number;
+  rotationSpeed?: number;
+  particleSize?: number;
+  particleColor?: string;
+  baseSegmentsPerPair?: number;
+  /** 画面座標 (0–1, 左上が 0,0)。らせんが見える始点。 */
+  startViewport?: { x: number; y: number };
+  /** 画面座標 (0–1)。らせんが見える終点。 */
+  endViewport?: { x: number; y: number };
 };
+
+const DEFAULT_START = { x: 0.02, y: 0.88 };
+const DEFAULT_END = { x: 0.9, y: 0.58 };
 
 export default function DNAHelix({
   className,
@@ -41,10 +49,10 @@ export default function DNAHelix({
   particleSize = 0.25,
   particleColor = '#aeaeff',
   baseSegmentsPerPair = 0,
-  tiltDeg = -100,
+  startViewport = DEFAULT_START,
+  endViewport = DEFAULT_END,
 }: DNAHelixProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const animationFrameIdRef = useRef<number | null>(null);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -56,22 +64,27 @@ export default function DNAHelix({
     const camera = new PerspectiveCamera(55, 1, 0.1, 1000);
     camera.position.set(0, 0, 34);
 
-    const renderer = new WebGLRenderer({ antialias: true, alpha: true });
+    const renderer = new WebGLRenderer({
+      antialias: false,
+      alpha: true,
+      depth: false,
+      stencil: false,
+    });
     renderer.setClearColor(0x000000, 0);
 
     const setRendererSize = () => {
       const width = container.clientWidth || window.innerWidth;
       const heightPx = container.clientHeight || window.innerHeight;
-      camera.aspect = width / heightPx;
+      camera.aspect = width / Math.max(heightPx, 1);
       camera.updateProjectionMatrix();
       renderer.setSize(width, heightPx, false);
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      renderer.setPixelRatio(capDevicePixelRatio(window.devicePixelRatio || 1));
     };
     setRendererSize();
+    renderer.domElement.style.width = '100%';
+    renderer.domElement.style.height = '100%';
     container.appendChild(renderer.domElement);
 
-    // 初期は透明にしておき、読み込み時に3秒かけてフェードインさせる
-    // CSS トランジションで実装（canvas 要素の style を直接操作）
     renderer.domElement.style.opacity = '0';
     renderer.domElement.style.transition = 'opacity 3s ease';
     requestAnimationFrame(() => {
@@ -79,21 +92,17 @@ export default function DNAHelix({
       renderer.domElement.style.opacity = '1';
     });
 
-    // 二重らせんを構築
     const root = new Group();
     const content = new Group();
     root.add(content);
     scene.add(root);
 
     const totalSegments = Math.max(4, Math.floor(turns * segmentsPerTurn));
-    const totalAngle = turns * Math.PI * 2; // 0..2π*turns
-
-    // yを- height/2 .. + height/2 に割り当て
+    const totalAngle = turns * Math.PI * 2;
     const yStart = -height / 2;
     const yStep = height / totalSegments;
 
-    // 全粒子座標をまとめて生成
-    const helixPointsCount = (totalSegments + 1) * 2; // A/Bバックボーン
+    const helixPointsCount = (totalSegments + 1) * 2;
     const pairCount = Math.floor(totalSegments / Math.max(1, baseEvery));
     const baseDotsPerPair = Math.max(1, Math.floor(baseSegmentsPerPair));
     const pairDotsCount = pairCount * (baseDotsPerPair + 1);
@@ -112,18 +121,16 @@ export default function DNAHelix({
       return { y, ax, az, bx, bz };
     };
 
-    // バックボーンA/B
     for (let i = 0; i <= totalSegments; i += 1) {
       const { y, ax, az, bx, bz } = getBackbonePos(i);
-      positions[ptr++] = ax; // A
+      positions[ptr++] = ax;
       positions[ptr++] = y;
       positions[ptr++] = az;
-      positions[ptr++] = bx; // B
+      positions[ptr++] = bx;
       positions[ptr++] = y;
       positions[ptr++] = bz;
     }
 
-    // 塩基対を粒子で（A→Bを分割）
     for (let i = 0; i < totalSegments; i += baseEvery) {
       const { y, ax, az, bx, bz } = getBackbonePos(i);
       for (let s = 0; s <= baseDotsPerPair; s += 1) {
@@ -144,33 +151,63 @@ export default function DNAHelix({
     const dots = new Points(geom, material);
     content.add(dots);
 
-    // 初期傾き（右に傾ける）: コンテンツ自体を傾ける
-    content.rotation.z = -(tiltDeg * Math.PI) / 180;
-
-    // アニメーション
-    const t0 = performance.now();
-    let last = t0;
     const localYAxis = new Vector3(0, 1, 0);
-    const animate = () => {
-      const now = performance.now();
-      const dt = (now - last) / 1000;
-      last = now;
+    const startWorld = new Vector3();
+    const endWorld = new Vector3();
+    const axisDir = new Vector3();
+    const midpoint = new Vector3();
+    const alignQuat = new Quaternion();
 
-      // らせんの中心軸（傾け後のローカルY）で回転
-      content.rotateOnAxis(localYAxis, rotationSpeed * dt);
-
-      camera.lookAt(0, 0, 0);
-      renderer.render(scene, camera);
-      animationFrameIdRef.current = requestAnimationFrame(animate);
+    // 元と同じカメラ距離（z=0 平面）で、画面上の2点を結ぶ対角に軸を置く。
+    const viewportToWorldOnViewPlane = (
+      viewport: { x: number; y: number },
+      target: Vector3
+    ) => {
+      const fovRad = (camera.fov * Math.PI) / 180;
+      const viewHeight = 2 * Math.tan(fovRad / 2) * Math.abs(camera.position.z);
+      const viewWidth = viewHeight * camera.aspect;
+      target.set(
+        (viewport.x - 0.5) * viewWidth,
+        (0.5 - viewport.y) * viewHeight,
+        0
+      );
     };
-    animationFrameIdRef.current = requestAnimationFrame(animate);
 
-    const handleResize = () => setRendererSize();
+    const frameToViewport = () => {
+      camera.lookAt(0, 0, 0);
+      viewportToWorldOnViewPlane(startViewport, startWorld);
+      viewportToWorldOnViewPlane(endViewport, endWorld);
+      axisDir.subVectors(endWorld, startWorld);
+      if (axisDir.lengthSq() < 1e-8) {
+        return;
+      }
+      axisDir.normalize();
+      midpoint.addVectors(startWorld, endWorld).multiplyScalar(0.5);
+      alignQuat.setFromUnitVectors(localYAxis, axisDir);
+      content.quaternion.copy(alignQuat);
+      content.position.copy(midpoint);
+    };
+
+    frameToViewport();
+
+    const renderFrame = (dt: number) => {
+      content.rotateOnAxis(localYAxis, rotationSpeed * dt);
+      renderer.render(scene, camera);
+    };
+    renderFrame(0);
+    const stopPlayback = startWebGLPlayback(container, (_now, dt) => {
+      renderFrame(dt);
+    });
+
+    const handleResize = () => {
+      setRendererSize();
+      frameToViewport();
+      renderFrame(0);
+    };
     window.addEventListener('resize', handleResize);
 
     return () => {
-      if (animationFrameIdRef.current !== null)
-        cancelAnimationFrame(animationFrameIdRef.current);
+      stopPlayback();
       window.removeEventListener('resize', handleResize);
       geom.dispose();
       material.dispose();
@@ -189,7 +226,10 @@ export default function DNAHelix({
     particleSize,
     particleColor,
     baseSegmentsPerPair,
-    tiltDeg,
+    startViewport.x,
+    startViewport.y,
+    endViewport.x,
+    endViewport.y,
   ]);
 
   return (
