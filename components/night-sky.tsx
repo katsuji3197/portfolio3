@@ -20,6 +20,8 @@ export default function NightSky() {
     let disposed = false;
     let stopPlayback: (() => void) | null = null;
     let onResize: (() => void) | null = null;
+    let onPointerMove: ((event: PointerEvent) => void) | null = null;
+    let onPointerLeave: (() => void) | null = null;
     let renderer: import('three').WebGLRenderer | null = null;
     let starGeometry: import('three').BufferGeometry | null = null;
     let starMaterial: import('three').ShaderMaterial | null = null;
@@ -127,17 +129,48 @@ export default function NightSky() {
       setRendererSize();
 
       let elapsed = 0;
+      let pointerTargetX = 0;
+      let pointerTargetY = 0;
+      let pointerX = 0;
+      let pointerY = 0;
+      const pointerEase = 3.2;
+      const yawRange = 0.055;
+      const pitchRange = 0.035;
+      const panX = 16;
+      const panY = 10;
+
+      onPointerMove = (event: PointerEvent) => {
+        if (event.pointerType !== 'mouse') {
+          return;
+        }
+        const width = window.innerWidth || 1;
+        const height = window.innerHeight || 1;
+        pointerTargetX = (event.clientX / width) * 2 - 1;
+        pointerTargetY = -((event.clientY / height) * 2 - 1);
+      };
+      onPointerLeave = () => {
+        pointerTargetX = 0;
+        pointerTargetY = 0;
+      };
+      window.addEventListener('pointermove', onPointerMove, { passive: true });
+      document.documentElement.addEventListener('mouseleave', onPointerLeave);
+
       const renderFrame = (dt: number) => {
         if (!renderer || !starMaterial || !milkyMaterial) {
           return;
         }
 
         elapsed += dt;
-        root.rotation.y = elapsed * 0.008;
-        root.rotation.x = Math.sin(elapsed * 0.05) * 0.04;
-        camera.position.x = Math.sin(elapsed * 0.12) * 8;
-        camera.position.y = Math.cos(elapsed * 0.1) * 5;
-        camera.lookAt(0, 0, 0);
+        const follow = 1 - Math.exp(-pointerEase * dt);
+        pointerX += (pointerTargetX - pointerX) * follow;
+        pointerY += (pointerTargetY - pointerY) * follow;
+
+        root.rotation.y = elapsed * 0.008 + pointerX * yawRange;
+        root.rotation.x =
+          Math.sin(elapsed * 0.05) * 0.04 - pointerY * pitchRange;
+        camera.position.x = Math.sin(elapsed * 0.12) * 8 + pointerX * panX;
+        camera.position.y = Math.cos(elapsed * 0.1) * 5 + pointerY * panY;
+        camera.lookAt(pointerX * 6, pointerY * 4, 0);
 
         starMaterial.uniforms.uTime.value = elapsed;
         milkyMaterial.uniforms.uTime.value = elapsed;
@@ -162,6 +195,15 @@ export default function NightSky() {
       stopPlayback?.();
       if (onResize) {
         window.removeEventListener('resize', onResize);
+      }
+      if (onPointerMove) {
+        window.removeEventListener('pointermove', onPointerMove);
+      }
+      if (onPointerLeave) {
+        document.documentElement.removeEventListener(
+          'mouseleave',
+          onPointerLeave
+        );
       }
       starGeometry?.dispose();
       starMaterial?.dispose();
