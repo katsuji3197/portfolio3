@@ -287,3 +287,17 @@ body {
   margin: 2rem auto;
   display: block;
 }
+
+.prose-custom .mermaid-diagram {
+  background: transparent;
+  margin: 1.5rem 0 2rem;
+  overflow-x: auto;
+}
+
+.prose-custom .mermaid-diagram svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  background: transparent !important;
+  background-color: transparent !important;
+}
