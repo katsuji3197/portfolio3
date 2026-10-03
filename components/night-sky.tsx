@@ -21,52 +21,52 @@ type StarLayerConfig = {
 
 const STAR_LAYERS: StarLayerConfig[] = [
   {
-    count: 1600,
+    count: 2000,
     planeZ: -280,
     thickness: 220,
     sizeMin: 6.2,
     sizeMax: 9.2,
-    brightnessMin: 0.28,
-    brightnessMax: 0.52,
+    brightnessMin: 0.34,
+    brightnessMax: 0.6,
     twinkleAmp: 0.07,
     parallax: 4,
   },
   {
-    count: 900,
+    count: 1100,
     planeZ: 80,
     thickness: 180,
     sizeMin: 6.8,
     sizeMax: 10.6,
-    brightnessMin: 0.38,
-    brightnessMax: 0.68,
+    brightnessMin: 0.44,
+    brightnessMax: 0.76,
     twinkleAmp: 0.09,
     parallax: 9,
   },
   {
-    count: 380,
+    count: 420,
     planeZ: 320,
     thickness: 120,
     sizeMin: 7.4,
     sizeMax: 12.2,
-    brightnessMin: 0.52,
-    brightnessMax: 0.88,
+    brightnessMin: 0.58,
+    brightnessMax: 0.95,
     twinkleAmp: 0.12,
     parallax: 16,
   },
   {
-    count: 36,
+    count: 40,
     planeZ: 460,
     thickness: 50,
     sizeMin: 10,
     sizeMax: 15.5,
-    brightnessMin: 0.95,
-    brightnessMax: 1.4,
+    brightnessMin: 1.0,
+    brightnessMax: 1.5,
     twinkleAmp: 0.05,
     parallax: 24,
   },
 ];
 
-const BAND_STAR_COUNT = 2000;
+const BAND_STAR_COUNT = 2400;
 
 /**
  * Naked-eye spectral-class counts from the Yale Bright Star Catalogue,
@@ -524,10 +524,10 @@ function createBandStarLayer(
     deps.Color,
     BAND_STAR_COUNT,
     () => randomBandPosition(),
-    5.4,
-    10.4,
-    0.9,
-    1.45,
+    6.0,
+    11.6,
+    1.12,
+    1.78,
     0.16
   );
 
@@ -568,7 +568,7 @@ function createMilkyWayBand(deps: {
   Group: typeof import('three').Group;
   DoubleSide: import('three').Side;
 }) {
-  const geometry = new deps.PlaneGeometry(3200, 780, 1, 1);
+  const geometry = new deps.PlaneGeometry(3400, 520, 1, 1);
   const material = new deps.ShaderMaterial({
     uniforms: {
       uTime: { value: 0 },
@@ -612,19 +612,19 @@ function createMilkyWayBand(deps: {
 
       void main() {
         vec2 uv = vUv * 2.0 - 1.0;
-        float core = exp(-pow(uv.y * 2.15, 2.0));
-        float halo = exp(-pow(uv.y * 0.85, 2.0)) * 0.62;
-        float along = 0.5 + 0.5 * fbm(vec2(uv.x * 2.6, uv.y * 4.2 + uTime * 0.012));
-        float lanes = smoothstep(0.22, 0.8, fbm(vec2(uv.x * 5.1 + 8.0, uv.y * 1.7)));
-        float glow = (core + halo) * along * mix(0.5, 1.0, lanes);
-        float edge = smoothstep(1.0, 0.28, abs(uv.x));
+        float core = exp(-pow(uv.y * 2.9, 2.0));
+        float halo = exp(-pow(uv.y * 1.15, 2.0)) * 0.92;
+        float along = 0.42 + 0.58 * fbm(vec2(uv.x * 2.4, uv.y * 3.6 + uTime * 0.012));
+        float lanes = smoothstep(0.18, 0.78, fbm(vec2(uv.x * 4.6 + 8.0, uv.y * 1.5)));
+        float glow = (core * 1.45 + halo) * along * mix(0.62, 1.2, lanes);
+        float edge = smoothstep(1.0, 0.16, abs(uv.x));
         glow *= edge;
 
-        vec3 cool = vec3(0.68, 0.78, 1.0);
-        vec3 warm = vec3(1.0, 0.86, 0.7);
-        vec3 col = mix(cool, warm, smoothstep(0.3, 0.75, along));
-        float alpha = glow * 0.62;
-        gl_FragColor = vec4(col * glow * 1.55, alpha);
+        vec3 cool = vec3(0.72, 0.82, 1.0);
+        vec3 warm = vec3(1.0, 0.88, 0.74);
+        vec3 col = mix(cool, warm, smoothstep(0.28, 0.78, along));
+        float alpha = glow * 0.92;
+        gl_FragColor = vec4(col * glow * 2.15, alpha);
       }
     `,
     transparent: true,
@@ -656,11 +656,11 @@ function randomViewportPosition(planeZ: number, thickness: number) {
 }
 
 function randomBandPosition() {
-  const x = (Math.random() - 0.5) * 2400;
+  const x = (Math.random() - 0.5) * 2500;
   const u = Math.random() * Math.PI * 2;
-  const r = Math.pow(Math.random(), 0.62);
-  const y = r * Math.cos(u) * 95;
-  const z = r * Math.sin(u) * 210;
+  const r = Math.pow(Math.random(), 0.42);
+  const y = r * Math.cos(u) * 62;
+  const z = r * Math.sin(u) * 130;
   return rotateBandPoint(x, y, z);
 }
 
