@@ -73,6 +73,8 @@ export default function DNAHelix({
       renderer.setPixelRatio(capDevicePixelRatio(window.devicePixelRatio || 1));
     };
     setRendererSize();
+    renderer.domElement.style.width = '100%';
+    renderer.domElement.style.height = '100%';
     container.appendChild(renderer.domElement);
 
     // 初期は透明にしておき、読み込み時に3秒かけてフェードインさせる
@@ -153,10 +155,14 @@ export default function DNAHelix({
     content.rotation.z = -(tiltDeg * Math.PI) / 180;
 
     const localYAxis = new Vector3(0, 1, 0);
-    const stopPlayback = startWebGLPlayback(container, (_now, dt) => {
+    const renderFrame = (dt: number) => {
       content.rotateOnAxis(localYAxis, rotationSpeed * dt);
       camera.lookAt(0, 0, 0);
       renderer.render(scene, camera);
+    };
+    renderFrame(0);
+    const stopPlayback = startWebGLPlayback(container, (_now, dt) => {
+      renderFrame(dt);
     });
 
     const handleResize = () => setRendererSize();

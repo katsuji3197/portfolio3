@@ -3,8 +3,9 @@
 import { useEffect, useRef } from 'react';
 import { capDevicePixelRatio, startWebGLPlayback } from '@/lib/webgl-playback';
 
-const FIELD_STAR_COUNT = 3800;
-const BAND_STAR_COUNT = 1600;
+const FIELD_STAR_COUNT = 5200;
+const BAND_STAR_COUNT = 2200;
+const BRIGHT_STAR_COUNT = 70;
 const MAX_PIXEL_RATIO = 2;
 
 export default function NightSky() {
@@ -57,11 +58,13 @@ export default function NightSky() {
       renderer = new WebGLRenderer({
         antialias: false,
         alpha: true,
-        depth: false,
+        depth: true,
         stencil: false,
+        premultipliedAlpha: false,
       });
       renderer.setClearColor(0x000000, 0);
       renderer.toneMapping = THREE.NoToneMapping;
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
 
       const setRendererSize = () => {
         if (!renderer) {
@@ -84,6 +87,10 @@ export default function NightSky() {
       };
 
       setRendererSize();
+      renderer.domElement.style.position = 'absolute';
+      renderer.domElement.style.inset = '0';
+      renderer.domElement.style.width = '100%';
+      renderer.domElement.style.height = '100%';
       container.appendChild(renderer.domElement);
 
       starTexture = createSoftStarTexture(Texture);
@@ -120,7 +127,7 @@ export default function NightSky() {
       setRendererSize();
 
       let elapsed = 0;
-      stopPlayback = startWebGLPlayback(container, (_now, dt) => {
+      const renderFrame = (dt: number) => {
         if (!renderer || !starMaterial || !milkyMaterial) {
           return;
         }
@@ -135,6 +142,13 @@ export default function NightSky() {
         starMaterial.uniforms.uTime.value = elapsed;
         milkyMaterial.uniforms.uTime.value = elapsed;
         renderer.render(scene, camera);
+      };
+
+      // タブ非表示などでループが始まらなくても、星空の1枚は出しておく
+      renderFrame(0);
+
+      stopPlayback = startWebGLPlayback(container, (_now, dt) => {
+        renderFrame(dt);
       });
 
       onResize = setRendererSize;
@@ -166,7 +180,7 @@ export default function NightSky() {
   return (
     <div
       ref={containerRef}
-      className="fixed inset-0 -z-10 pointer-events-none opacity-80"
+      className="fixed inset-0 -z-10 pointer-events-none overflow-hidden opacity-80"
       style={{
         background:
           'radial-gradient(1000px 600px at 50% 120%, #0b1226 0%, #070b18 35%, #050912 70%, #03060d 100%)',
@@ -214,7 +228,7 @@ function createStarField(
   },
   map: import('three').Texture
 ) {
-  const total = FIELD_STAR_COUNT + BAND_STAR_COUNT;
+  const total = FIELD_STAR_COUNT + BAND_STAR_COUNT + BRIGHT_STAR_COUNT;
   const positions = new Float32Array(total * 3);
   const colors = new Float32Array(total * 3);
   const sizes = new Float32Array(total);
@@ -222,26 +236,37 @@ function createStarField(
   const color = new deps.Color();
 
   for (let i = 0; i < total; i += 1) {
-    const inBand = i >= FIELD_STAR_COUNT;
-    const pos = inBand ? randomBandPosition() : randomFieldPosition();
+    const isBright = i >= FIELD_STAR_COUNT + BAND_STAR_COUNT;
+    const inBand = !isBright && i >= FIELD_STAR_COUNT;
+    const pos = inBand ? randomBandPosition() : randomFieldPosition(isBright);
     const idx = i * 3;
     positions[idx] = pos.x;
     positions[idx + 1] = pos.y;
     positions[idx + 2] = pos.z;
 
     pickStarColor(color, inBand);
-    const magnitude = inBand
-      ? Math.pow(Math.random(), 2.4) * 0.55
-      : Math.pow(Math.random(), 3.8);
-    const brightness = 0.38 + magnitude * 0.9;
+    const magnitude = isBright
+      ? 0.78 + Math.random() * 0.22
+      : inBand
+        ? Math.pow(Math.random(), 1.8) * 0.7
+        : Math.pow(Math.random(), 2.4);
+    const brightness = isBright
+      ? 1.35 + magnitude * 0.5
+      : 0.9 + magnitude * 1.15;
     colors[idx] = color.r * brightness;
     colors[idx + 1] = color.g * brightness;
     colors[idx + 2] = color.b * brightness;
 
-    sizes[i] = inBand ? 1.05 + magnitude * 2.1 : 1.15 + magnitude * 4.2;
+    sizes[i] = isBright
+      ? 9.5 + magnitude * 7
+      : inBand
+        ? 3.6 + magnitude * 4.4
+        : 5.2 + magnitude * 8.8;
     twinkles[idx] = Math.random() * Math.PI * 2;
-    twinkles[idx + 1] = 0.28 + Math.random() * 0.85;
-    twinkles[idx + 2] = 0.12 + (1 - magnitude) * 0.28;
+    twinkles[idx + 1] = 0.22 + Math.random() * 0.7;
+    twinkles[idx + 2] = isBright
+      ? 0.06 + Math.random() * 0.08
+      : 0.14 + (1 - magnitude) * 0.22;
   }
 
   const geometry = new deps.BufferGeometry();
@@ -278,11 +303,10 @@ function createStarField(
 
       void main() {
         vColor = aColor;
-        float twinkle = 0.72 + aTwinkle.z * sin(uTime * aTwinkle.y + aTwinkle.x);
-        float fade = smoothstep(0.0, 1.6, uTime);
-        vAlpha = clamp(twinkle, 0.2, 1.15) * fade;
+        float twinkle = 0.82 + aTwinkle.z * sin(uTime * aTwinkle.y + aTwinkle.x);
+        vAlpha = clamp(twinkle, 0.45, 1.25);
         vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-        gl_PointSize = aSize * uPixelRatio * (280.0 / max(-mvPosition.z, 1.0));
+        gl_PointSize = aSize * uPixelRatio * (300.0 / max(-mvPosition.z, 1.0));
         gl_Position = projectionMatrix * mvPosition;
       }
     `,
@@ -295,7 +319,7 @@ function createStarField(
         vec4 tex = texture2D(map, gl_PointCoord);
         float alpha = tex.a * vAlpha;
         if (alpha < 0.02) discard;
-        gl_FragColor = vec4(vColor * tex.rgb, alpha);
+        gl_FragColor = vec4(vColor * tex.rgb * 2.0, alpha);
       }
     `,
     transparent: true,
@@ -320,7 +344,7 @@ function createMilkyWayBand(deps: {
   Group: typeof import('three').Group;
   DoubleSide: import('three').Side;
 }) {
-  const geometry = new deps.PlaneGeometry(2800, 520, 1, 1);
+  const geometry = new deps.PlaneGeometry(3200, 780, 1, 1);
   const material = new deps.ShaderMaterial({
     uniforms: {
       uTime: { value: 0 },
@@ -364,20 +388,19 @@ function createMilkyWayBand(deps: {
 
       void main() {
         vec2 uv = vUv * 2.0 - 1.0;
-        float core = exp(-pow(uv.y * 3.1, 2.0));
-        float halo = exp(-pow(uv.y * 1.35, 2.0)) * 0.42;
-        float along = 0.55 + 0.45 * fbm(vec2(uv.x * 2.8, uv.y * 4.6 + uTime * 0.01));
-        float lanes = smoothstep(0.28, 0.82, fbm(vec2(uv.x * 5.4 + 8.0, uv.y * 1.8)));
-        float glow = (core + halo) * along * mix(0.55, 1.0, lanes);
-        float edge = smoothstep(1.0, 0.35, abs(uv.x));
+        float core = exp(-pow(uv.y * 2.15, 2.0));
+        float halo = exp(-pow(uv.y * 0.85, 2.0)) * 0.62;
+        float along = 0.5 + 0.5 * fbm(vec2(uv.x * 2.6, uv.y * 4.2 + uTime * 0.012));
+        float lanes = smoothstep(0.22, 0.8, fbm(vec2(uv.x * 5.1 + 8.0, uv.y * 1.7)));
+        float glow = (core + halo) * along * mix(0.5, 1.0, lanes);
+        float edge = smoothstep(1.0, 0.28, abs(uv.x));
         glow *= edge;
 
-        vec3 cool = vec3(0.52, 0.64, 0.95);
-        vec3 warm = vec3(0.93, 0.80, 0.66);
-        vec3 col = mix(cool, warm, smoothstep(0.32, 0.78, along));
-        float fade = smoothstep(0.0, 2.2, uTime);
-        float alpha = glow * 0.18 * fade;
-        gl_FragColor = vec4(col * glow, alpha);
+        vec3 cool = vec3(0.68, 0.78, 1.0);
+        vec3 warm = vec3(1.0, 0.86, 0.7);
+        vec3 col = mix(cool, warm, smoothstep(0.3, 0.75, along));
+        float alpha = glow * 0.48;
+        gl_FragColor = vec4(col * glow * 1.25, alpha);
       }
     `,
     transparent: true,
@@ -396,8 +419,8 @@ function createMilkyWayBand(deps: {
   return { group, geometry, material };
 }
 
-function randomFieldPosition() {
-  const radius = 950 + Math.random() * 850;
+function randomFieldPosition(closer = false) {
+  const radius = closer ? 620 + Math.random() * 420 : 880 + Math.random() * 900;
   const theta = Math.acos(2 * Math.random() - 1);
   const phi = Math.random() * Math.PI * 2;
   return {

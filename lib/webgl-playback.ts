@@ -51,11 +51,15 @@ export function startWebGLPlayback(
   document.addEventListener('visibilitychange', onVisibility);
 
   const observer = new IntersectionObserver(
-    ([entry]) => {
-      onscreen = Boolean(entry?.isIntersecting);
+    entries => {
+      const entry = entries[0];
+      if (!entry) {
+        return;
+      }
+      onscreen = entry.isIntersecting;
       sync();
     },
-    { threshold: 0 }
+    { threshold: 0, rootMargin: '64px' }
   );
   observer.observe(target);
 
