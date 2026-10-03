@@ -13,6 +13,7 @@ import {
   Scene,
   WebGLRenderer,
 } from 'three';
+import { capDevicePixelRatio, startWebGLPlayback } from '@/lib/webgl-playback';
 
 type DNAHelixProps = {
   className?: string;
@@ -44,7 +45,6 @@ export default function DNAHelix({
   tiltDeg = -100,
 }: DNAHelixProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const animationFrameIdRef = useRef<number | null>(null);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -56,7 +56,12 @@ export default function DNAHelix({
     const camera = new PerspectiveCamera(55, 1, 0.1, 1000);
     camera.position.set(0, 0, 34);
 
-    const renderer = new WebGLRenderer({ antialias: true, alpha: true });
+    const renderer = new WebGLRenderer({
+      antialias: false,
+      alpha: true,
+      depth: false,
+      stencil: false,
+    });
     renderer.setClearColor(0x000000, 0);
 
     const setRendererSize = () => {
@@ -65,7 +70,7 @@ export default function DNAHelix({
       camera.aspect = width / heightPx;
       camera.updateProjectionMatrix();
       renderer.setSize(width, heightPx, false);
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      renderer.setPixelRatio(capDevicePixelRatio(window.devicePixelRatio || 1));
     };
     setRendererSize();
     container.appendChild(renderer.domElement);
@@ -147,30 +152,18 @@ export default function DNAHelix({
     // 初期傾き（右に傾ける）: コンテンツ自体を傾ける
     content.rotation.z = -(tiltDeg * Math.PI) / 180;
 
-    // アニメーション
-    const t0 = performance.now();
-    let last = t0;
     const localYAxis = new Vector3(0, 1, 0);
-    const animate = () => {
-      const now = performance.now();
-      const dt = (now - last) / 1000;
-      last = now;
-
-      // らせんの中心軸（傾け後のローカルY）で回転
+    const stopPlayback = startWebGLPlayback(container, (_now, dt) => {
       content.rotateOnAxis(localYAxis, rotationSpeed * dt);
-
       camera.lookAt(0, 0, 0);
       renderer.render(scene, camera);
-      animationFrameIdRef.current = requestAnimationFrame(animate);
-    };
-    animationFrameIdRef.current = requestAnimationFrame(animate);
+    });
 
     const handleResize = () => setRendererSize();
     window.addEventListener('resize', handleResize);
 
     return () => {
-      if (animationFrameIdRef.current !== null)
-        cancelAnimationFrame(animationFrameIdRef.current);
+      stopPlayback();
       window.removeEventListener('resize', handleResize);
       geom.dispose();
       material.dispose();
