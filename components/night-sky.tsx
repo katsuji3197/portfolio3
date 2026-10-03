@@ -3,10 +3,70 @@
 import { useEffect, useRef } from 'react';
 import { capDevicePixelRatio, startWebGLPlayback } from '@/lib/webgl-playback';
 
-const FIELD_STAR_COUNT = 5200;
-const BAND_STAR_COUNT = 2200;
-const BRIGHT_STAR_COUNT = 70;
 const MAX_PIXEL_RATIO = 2;
+const CAMERA_Z = 600;
+const CAMERA_FOV = 70;
+
+type StarLayerConfig = {
+  count: number;
+  planeZ: number;
+  thickness: number;
+  sizeMin: number;
+  sizeMax: number;
+  brightnessMin: number;
+  brightnessMax: number;
+  twinkleAmp: number;
+  parallax: number;
+};
+
+const STAR_LAYERS: StarLayerConfig[] = [
+  {
+    count: 4200,
+    planeZ: -280,
+    thickness: 220,
+    sizeMin: 6.2,
+    sizeMax: 9.4,
+    brightnessMin: 0.62,
+    brightnessMax: 1.05,
+    twinkleAmp: 0.12,
+    parallax: 4,
+  },
+  {
+    count: 3200,
+    planeZ: 80,
+    thickness: 180,
+    sizeMin: 6.8,
+    sizeMax: 11,
+    brightnessMin: 0.85,
+    brightnessMax: 1.35,
+    twinkleAmp: 0.16,
+    parallax: 9,
+  },
+  {
+    count: 1600,
+    planeZ: 320,
+    thickness: 120,
+    sizeMin: 7.4,
+    sizeMax: 12.5,
+    brightnessMin: 1.05,
+    brightnessMax: 1.7,
+    twinkleAmp: 0.2,
+    parallax: 16,
+  },
+  {
+    count: 90,
+    planeZ: 460,
+    thickness: 50,
+    sizeMin: 10,
+    sizeMax: 16,
+    brightnessMin: 1.45,
+    brightnessMax: 2.05,
+    twinkleAmp: 0.07,
+    parallax: 24,
+  },
+];
+
+const BAND_STAR_COUNT = 1800;
 
 export default function NightSky() {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -23,11 +83,15 @@ export default function NightSky() {
     let onPointerMove: ((event: PointerEvent) => void) | null = null;
     let onPointerLeave: (() => void) | null = null;
     let renderer: import('three').WebGLRenderer | null = null;
-    let starGeometry: import('three').BufferGeometry | null = null;
-    let starMaterial: import('three').ShaderMaterial | null = null;
     let milkyGeometry: import('three').BufferGeometry | null = null;
     let milkyMaterial: import('three').ShaderMaterial | null = null;
     let starTexture: import('three').Texture | null = null;
+    const starLayers: {
+      geometry: import('three').BufferGeometry;
+      material: import('three').ShaderMaterial;
+      group: import('three').Group;
+      parallax: number;
+    }[] = [];
 
     const setup = async () => {
       const THREE = await import('three');
@@ -54,8 +118,8 @@ export default function NightSky() {
       const scene = new Scene();
       scene.background = null;
 
-      const camera = new PerspectiveCamera(70, 1, 1, 4000);
-      camera.position.z = 600;
+      const camera = new PerspectiveCamera(CAMERA_FOV, 1, 1, 4000);
+      camera.position.z = CAMERA_Z;
 
       renderer = new WebGLRenderer({
         antialias: false,
@@ -80,11 +144,12 @@ export default function NightSky() {
           capDevicePixelRatio(window.devicePixelRatio || 1)
         );
         renderer.setSize(width, height, false);
-        if (starMaterial) {
-          starMaterial.uniforms.uPixelRatio.value = Math.min(
-            window.devicePixelRatio || 1,
-            MAX_PIXEL_RATIO
-          );
+        const pixelRatio = Math.min(
+          window.devicePixelRatio || 1,
+          MAX_PIXEL_RATIO
+        );
+        for (const layer of starLayers) {
+          layer.material.uniforms.uPixelRatio.value = pixelRatio;
         }
       };
 
@@ -99,20 +164,25 @@ export default function NightSky() {
       const root = new Group();
       scene.add(root);
 
-      const starField = createStarField(
-        {
-          BufferGeometry,
-          Float32BufferAttribute,
-          Points,
-          ShaderMaterial,
-          Color,
-          AdditiveBlending,
-        },
-        starTexture
-      );
-      starGeometry = starField.geometry;
-      starMaterial = starField.material;
-      root.add(starField.points);
+      const sharedDeps = {
+        BufferGeometry,
+        Float32BufferAttribute,
+        Points,
+        ShaderMaterial,
+        Color,
+        AdditiveBlending,
+        Group,
+      };
+
+      for (const config of STAR_LAYERS) {
+        const layer = createViewportStarLayer(sharedDeps, starTexture, config);
+        starLayers.push(layer);
+        root.add(layer.group);
+      }
+
+      const bandLayer = createBandStarLayer(sharedDeps, starTexture);
+      starLayers.push(bandLayer);
+      root.add(bandLayer.group);
 
       const milkyWay = createMilkyWayBand({
         PlaneGeometry,
@@ -156,7 +226,7 @@ export default function NightSky() {
       document.documentElement.addEventListener('mouseleave', onPointerLeave);
 
       const renderFrame = (dt: number) => {
-        if (!renderer || !starMaterial || !milkyMaterial) {
+        if (!renderer || !milkyMaterial) {
           return;
         }
 
@@ -172,12 +242,15 @@ export default function NightSky() {
         camera.position.y = Math.cos(elapsed * 0.1) * 5 + pointerY * panY;
         camera.lookAt(pointerX * 6, pointerY * 4, 0);
 
-        starMaterial.uniforms.uTime.value = elapsed;
+        for (const layer of starLayers) {
+          layer.group.position.x = pointerX * layer.parallax;
+          layer.group.position.y = pointerY * layer.parallax;
+          layer.material.uniforms.uTime.value = elapsed;
+        }
         milkyMaterial.uniforms.uTime.value = elapsed;
         renderer.render(scene, camera);
       };
 
-      // タブ非表示などでループが始まらなくても、星空の1枚は出しておく
       renderFrame(0);
 
       stopPlayback = startWebGLPlayback(container, (_now, dt) => {
@@ -205,8 +278,10 @@ export default function NightSky() {
           onPointerLeave
         );
       }
-      starGeometry?.dispose();
-      starMaterial?.dispose();
+      for (const layer of starLayers) {
+        layer.geometry.dispose();
+        layer.material.dispose();
+      }
       milkyGeometry?.dispose();
       milkyMaterial?.dispose();
       starTexture?.dispose();
@@ -259,71 +334,12 @@ function createSoftStarTexture(
   return texture;
 }
 
-function createStarField(
-  deps: {
-    BufferGeometry: typeof import('three').BufferGeometry;
-    Float32BufferAttribute: typeof import('three').Float32BufferAttribute;
-    Points: typeof import('three').Points;
-    ShaderMaterial: typeof import('three').ShaderMaterial;
-    Color: typeof import('three').Color;
-    AdditiveBlending: typeof import('three').AdditiveBlending;
-  },
+function createStarMaterial(
+  ShaderMaterial: typeof import('three').ShaderMaterial,
+  AdditiveBlending: typeof import('three').AdditiveBlending,
   map: import('three').Texture
 ) {
-  const total = FIELD_STAR_COUNT + BAND_STAR_COUNT + BRIGHT_STAR_COUNT;
-  const positions = new Float32Array(total * 3);
-  const colors = new Float32Array(total * 3);
-  const sizes = new Float32Array(total);
-  const twinkles = new Float32Array(total * 3);
-  const color = new deps.Color();
-
-  for (let i = 0; i < total; i += 1) {
-    const isBright = i >= FIELD_STAR_COUNT + BAND_STAR_COUNT;
-    const inBand = !isBright && i >= FIELD_STAR_COUNT;
-    const pos = inBand ? randomBandPosition() : randomFieldPosition(isBright);
-    const idx = i * 3;
-    positions[idx] = pos.x;
-    positions[idx + 1] = pos.y;
-    positions[idx + 2] = pos.z;
-
-    pickStarColor(color, inBand);
-    const magnitude = isBright
-      ? 0.78 + Math.random() * 0.22
-      : inBand
-        ? Math.pow(Math.random(), 1.8) * 0.7
-        : Math.pow(Math.random(), 2.4);
-    const brightness = isBright
-      ? 1.35 + magnitude * 0.5
-      : 0.9 + magnitude * 1.15;
-    colors[idx] = color.r * brightness;
-    colors[idx + 1] = color.g * brightness;
-    colors[idx + 2] = color.b * brightness;
-
-    sizes[i] = isBright
-      ? 9.5 + magnitude * 7
-      : inBand
-        ? 3.6 + magnitude * 4.4
-        : 5.2 + magnitude * 8.8;
-    twinkles[idx] = Math.random() * Math.PI * 2;
-    twinkles[idx + 1] = 0.22 + Math.random() * 0.7;
-    twinkles[idx + 2] = isBright
-      ? 0.06 + Math.random() * 0.08
-      : 0.14 + (1 - magnitude) * 0.22;
-  }
-
-  const geometry = new deps.BufferGeometry();
-  geometry.setAttribute(
-    'position',
-    new deps.Float32BufferAttribute(positions, 3)
-  );
-  geometry.setAttribute('aColor', new deps.Float32BufferAttribute(colors, 3));
-  geometry.setAttribute('aSize', new deps.Float32BufferAttribute(sizes, 1));
-  geometry.setAttribute(
-    'aTwinkle',
-    new deps.Float32BufferAttribute(twinkles, 3)
-  );
-
-  const material = new deps.ShaderMaterial({
+  return new ShaderMaterial({
     uniforms: {
       uTime: { value: 0 },
       uPixelRatio: {
@@ -348,7 +364,10 @@ function createStarField(
         float twinkle = 0.82 + aTwinkle.z * sin(uTime * aTwinkle.y + aTwinkle.x);
         vAlpha = clamp(twinkle, 0.45, 1.25);
         vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-        gl_PointSize = aSize * uPixelRatio * (300.0 / max(-mvPosition.z, 1.0));
+        gl_PointSize = max(
+          aSize * uPixelRatio * (300.0 / max(-mvPosition.z, 80.0)),
+          1.8 * uPixelRatio
+        );
         gl_Position = projectionMatrix * mvPosition;
       }
     `,
@@ -367,15 +386,155 @@ function createStarField(
     transparent: true,
     depthWrite: false,
     depthTest: false,
-    blending: deps.AdditiveBlending,
+    blending: AdditiveBlending,
     toneMapped: false,
   });
+}
 
-  return {
-    points: new deps.Points(geometry, material),
-    geometry,
-    material,
-  };
+function fillStarAttributes(
+  ColorCtor: typeof import('three').Color,
+  count: number,
+  place: (index: number) => { x: number; y: number; z: number },
+  sizeMin: number,
+  sizeMax: number,
+  brightnessMin: number,
+  brightnessMax: number,
+  twinkleAmp: number,
+  preferBandColor: boolean
+) {
+  const positions = new Float32Array(count * 3);
+  const colors = new Float32Array(count * 3);
+  const sizes = new Float32Array(count);
+  const twinkles = new Float32Array(count * 3);
+  const color = new ColorCtor();
+
+  for (let i = 0; i < count; i += 1) {
+    const pos = place(i);
+    const idx = i * 3;
+    positions[idx] = pos.x;
+    positions[idx + 1] = pos.y;
+    positions[idx + 2] = pos.z;
+
+    pickStarColor(color, preferBandColor);
+    const rank = Math.pow(Math.random(), 2.1);
+    const brightness = brightnessMin + rank * (brightnessMax - brightnessMin);
+    colors[idx] = color.r * brightness;
+    colors[idx + 1] = color.g * brightness;
+    colors[idx + 2] = color.b * brightness;
+    sizes[i] = sizeMin + rank * (sizeMax - sizeMin);
+    twinkles[idx] = Math.random() * Math.PI * 2;
+    twinkles[idx + 1] = 0.2 + Math.random() * 0.75;
+    twinkles[idx + 2] = twinkleAmp * (0.65 + (1 - rank) * 0.7);
+  }
+
+  return { positions, colors, sizes, twinkles };
+}
+
+function createViewportStarLayer(
+  deps: {
+    BufferGeometry: typeof import('three').BufferGeometry;
+    Float32BufferAttribute: typeof import('three').Float32BufferAttribute;
+    Points: typeof import('three').Points;
+    ShaderMaterial: typeof import('three').ShaderMaterial;
+    Color: typeof import('three').Color;
+    AdditiveBlending: typeof import('three').AdditiveBlending;
+    Group: typeof import('three').Group;
+  },
+  map: import('three').Texture,
+  config: StarLayerConfig
+) {
+  const attrs = fillStarAttributes(
+    deps.Color,
+    config.count,
+    () => randomViewportPosition(config.planeZ, config.thickness),
+    config.sizeMin,
+    config.sizeMax,
+    config.brightnessMin,
+    config.brightnessMax,
+    config.twinkleAmp,
+    false
+  );
+
+  const geometry = new deps.BufferGeometry();
+  geometry.setAttribute(
+    'position',
+    new deps.Float32BufferAttribute(attrs.positions, 3)
+  );
+  geometry.setAttribute(
+    'aColor',
+    new deps.Float32BufferAttribute(attrs.colors, 3)
+  );
+  geometry.setAttribute(
+    'aSize',
+    new deps.Float32BufferAttribute(attrs.sizes, 1)
+  );
+  geometry.setAttribute(
+    'aTwinkle',
+    new deps.Float32BufferAttribute(attrs.twinkles, 3)
+  );
+
+  const material = createStarMaterial(
+    deps.ShaderMaterial,
+    deps.AdditiveBlending,
+    map
+  );
+  const points = new deps.Points(geometry, material);
+  const group = new deps.Group();
+  group.add(points);
+  return { geometry, material, group, parallax: config.parallax };
+}
+
+function createBandStarLayer(
+  deps: {
+    BufferGeometry: typeof import('three').BufferGeometry;
+    Float32BufferAttribute: typeof import('three').Float32BufferAttribute;
+    Points: typeof import('three').Points;
+    ShaderMaterial: typeof import('three').ShaderMaterial;
+    Color: typeof import('three').Color;
+    AdditiveBlending: typeof import('three').AdditiveBlending;
+    Group: typeof import('three').Group;
+  },
+  map: import('three').Texture
+) {
+  const attrs = fillStarAttributes(
+    deps.Color,
+    BAND_STAR_COUNT,
+    () => randomBandPosition(),
+    4.8,
+    9.2,
+    0.75,
+    1.25,
+    0.14,
+    true
+  );
+
+  const geometry = new deps.BufferGeometry();
+  geometry.setAttribute(
+    'position',
+    new deps.Float32BufferAttribute(attrs.positions, 3)
+  );
+  geometry.setAttribute(
+    'aColor',
+    new deps.Float32BufferAttribute(attrs.colors, 3)
+  );
+  geometry.setAttribute(
+    'aSize',
+    new deps.Float32BufferAttribute(attrs.sizes, 1)
+  );
+  geometry.setAttribute(
+    'aTwinkle',
+    new deps.Float32BufferAttribute(attrs.twinkles, 3)
+  );
+
+  const material = createStarMaterial(
+    deps.ShaderMaterial,
+    deps.AdditiveBlending,
+    map
+  );
+  const points = new deps.Points(geometry, material);
+  const group = new deps.Group();
+  group.add(points);
+  return { geometry, material, group, parallax: 7 };
 }
 
 function createMilkyWayBand(deps: {
@@ -461,14 +620,15 @@ function createMilkyWayBand(deps: {
   return { group, geometry, material };
 }
 
-function randomFieldPosition(closer = false) {
-  const radius = closer ? 620 + Math.random() * 420 : 880 + Math.random() * 900;
-  const theta = Math.acos(2 * Math.random() - 1);
-  const phi = Math.random() * Math.PI * 2;
+function randomViewportPosition(planeZ: number, thickness: number) {
+  const dist = Math.max(CAMERA_Z - planeZ, 80);
+  const halfHeight =
+    Math.tan(((CAMERA_FOV * Math.PI) / 180) * 0.5) * dist * 1.55;
+  const halfWidth = halfHeight * 2.35;
   return {
-    x: radius * Math.sin(theta) * Math.cos(phi),
-    y: radius * Math.sin(theta) * Math.sin(phi),
-    z: radius * Math.cos(theta),
+    x: (Math.random() * 2 - 1) * halfWidth,
+    y: (Math.random() * 2 - 1) * halfHeight,
+    z: planeZ + (Math.random() - 0.5) * thickness,
   };
 }
 
