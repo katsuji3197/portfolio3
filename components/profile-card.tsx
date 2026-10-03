@@ -27,9 +27,7 @@ export default function ProfileCard() {
         <div className="h-[1px] w-full pr-2 bg-neutral-700" />
         <ul className="flex flex-col gap-2">
           <li className="flex flex-col gap-2 text-neutral-400 text-xs md:text-sm">
-            <ul>
-              WebプロダクトのUIとフロントエンド
-            </ul>
+            <ul>WebプロダクトのUIとフロントエンド</ul>
           </li>
         </ul>
       </div>
