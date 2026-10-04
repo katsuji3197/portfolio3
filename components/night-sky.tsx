@@ -21,46 +21,46 @@ type StarLayerConfig = {
 
 const STAR_LAYERS: StarLayerConfig[] = [
   {
-    count: 3800,
+    count: 5200,
     planeZ: -280,
     thickness: 220,
     sizeMin: 6.2,
     sizeMax: 9.2,
-    brightnessMin: 0.18,
-    brightnessMax: 0.34,
+    brightnessMin: 0.22,
+    brightnessMax: 0.4,
     twinkleAmp: 0.06,
     parallax: 4,
   },
   {
-    count: 2200,
+    count: 3000,
     planeZ: 80,
     thickness: 180,
     sizeMin: 6.8,
     sizeMax: 10.6,
-    brightnessMin: 0.24,
-    brightnessMax: 0.42,
+    brightnessMin: 0.28,
+    brightnessMax: 0.48,
     twinkleAmp: 0.08,
     parallax: 9,
   },
   {
-    count: 900,
+    count: 1200,
     planeZ: 320,
     thickness: 120,
     sizeMin: 7.4,
     sizeMax: 12.2,
-    brightnessMin: 0.3,
-    brightnessMax: 0.52,
+    brightnessMin: 0.34,
+    brightnessMax: 0.56,
     twinkleAmp: 0.1,
     parallax: 16,
   },
   {
-    count: 80,
+    count: 100,
     planeZ: 460,
     thickness: 50,
     sizeMin: 10,
     sizeMax: 15.5,
-    brightnessMin: 0.55,
-    brightnessMax: 0.88,
+    brightnessMin: 0.58,
+    brightnessMax: 0.9,
     twinkleAmp: 0.04,
     parallax: 24,
   },
@@ -486,8 +486,8 @@ function createViewportStarLayer(
 function randomViewportPosition(planeZ: number, thickness: number) {
   const dist = Math.max(CAMERA_Z - planeZ, 80);
   const halfHeight =
-    Math.tan(((CAMERA_FOV * Math.PI) / 180) * 0.5) * dist * 1.55;
-  const halfWidth = halfHeight * 2.35;
+    Math.tan(((CAMERA_FOV * Math.PI) / 180) * 0.5) * dist * 1.2;
+  const halfWidth = halfHeight * 1.85;
   return {
     x: (Math.random() * 2 - 1) * halfWidth,
     y: (Math.random() * 2 - 1) * halfHeight,
