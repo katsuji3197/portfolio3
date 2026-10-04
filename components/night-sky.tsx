@@ -6,6 +6,8 @@ import { capDevicePixelRatio, startWebGLPlayback } from '@/lib/webgl-playback';
 const MAX_PIXEL_RATIO = 2;
 const CAMERA_Z = 600;
 const CAMERA_FOV = 70;
+/** Milky Way mesh pose at 4:00. Shader flow is uTime * 0.012 → 2.88. */
+const MILKY_WAY_HOLD_SECONDS = 4 * 60;
 
 type StarLayerConfig = {
   count: number;
@@ -261,11 +263,15 @@ export default function NightSky() {
         pointerX += (pointerTargetX - pointerX) * follow;
         pointerY += (pointerTargetY - pointerY) * follow;
 
-        root.rotation.y = elapsed * 0.008 + pointerX * yawRange;
+        root.rotation.y =
+          MILKY_WAY_HOLD_SECONDS * 0.008 + pointerX * yawRange;
         root.rotation.x =
-          Math.sin(elapsed * 0.05) * 0.04 - pointerY * pitchRange;
-        camera.position.x = Math.sin(elapsed * 0.12) * 8 + pointerX * panX;
-        camera.position.y = Math.cos(elapsed * 0.1) * 5 + pointerY * panY;
+          Math.sin(MILKY_WAY_HOLD_SECONDS * 0.05) * 0.04 -
+          pointerY * pitchRange;
+        camera.position.x =
+          Math.sin(MILKY_WAY_HOLD_SECONDS * 0.12) * 8 + pointerX * panX;
+        camera.position.y =
+          Math.cos(MILKY_WAY_HOLD_SECONDS * 0.1) * 5 + pointerY * panY;
         camera.lookAt(pointerX * 6, pointerY * 4, 0);
 
         for (const layer of starLayers) {
@@ -273,7 +279,7 @@ export default function NightSky() {
           layer.group.position.y = pointerY * layer.parallax;
           layer.material.uniforms.uTime.value = elapsed;
         }
-        milkyMaterial.uniforms.uTime.value = elapsed;
+        milkyMaterial.uniforms.uTime.value = MILKY_WAY_HOLD_SECONDS;
         renderer.render(scene, camera);
       };
 
@@ -571,7 +577,7 @@ function createMilkyWayBand(deps: {
   const geometry = new deps.PlaneGeometry(3200, 780, 1, 1);
   const material = new deps.ShaderMaterial({
     uniforms: {
-      uTime: { value: 0 },
+      uTime: { value: MILKY_WAY_HOLD_SECONDS },
     },
     vertexShader: `
       varying vec2 vUv;
