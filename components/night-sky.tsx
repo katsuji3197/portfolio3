@@ -141,6 +141,8 @@ export default function NightSky() {
         Texture,
         PlaneGeometry,
         Mesh,
+        Euler,
+        Matrix4,
       } = THREE;
 
       const scene = new Scene();
@@ -148,6 +150,8 @@ export default function NightSky() {
 
       const camera = new PerspectiveCamera(CAMERA_FOV, 1, 1, 4000);
       camera.position.z = CAMERA_Z;
+      scene.add(camera);
+      const holdCamera = new PerspectiveCamera(CAMERA_FOV, 1, 1, 4000);
 
       renderer = new WebGLRenderer({
         antialias: false,
@@ -168,6 +172,8 @@ export default function NightSky() {
         const height = window.innerHeight;
         camera.aspect = width / height;
         camera.updateProjectionMatrix();
+        holdCamera.aspect = width / height;
+        holdCamera.updateProjectionMatrix();
         renderer.setPixelRatio(
           capDevicePixelRatio(window.devicePixelRatio || 1)
         );
@@ -222,7 +228,16 @@ export default function NightSky() {
       });
       milkyGeometry = milkyWay.geometry;
       milkyMaterial = milkyWay.material;
-      root.add(milkyWay.group);
+      milkyWay.group.rotation.set(0, 0, 0);
+      milkyWay.group.matrixAutoUpdate = false;
+      camera.add(milkyWay.group);
+
+      const holdRootEuler = new Euler();
+      const meshLocalEuler = new Euler(Math.PI / 6, 0, -Math.PI / 6);
+      const holdRootMatrix = new Matrix4();
+      const meshLocalMatrix = new Matrix4();
+      const holdMeshWorld = new Matrix4();
+      const meshInHoldCam = new Matrix4();
 
       setRendererSize();
 
@@ -263,16 +278,34 @@ export default function NightSky() {
         pointerX += (pointerTargetX - pointerX) * follow;
         pointerY += (pointerTargetY - pointerY) * follow;
 
-        root.rotation.y =
-          MILKY_WAY_HOLD_SECONDS * 0.008 + pointerX * yawRange;
+        root.rotation.y = elapsed * 0.008 + pointerX * yawRange;
         root.rotation.x =
-          Math.sin(MILKY_WAY_HOLD_SECONDS * 0.05) * 0.04 -
-          pointerY * pitchRange;
-        camera.position.x =
-          Math.sin(MILKY_WAY_HOLD_SECONDS * 0.12) * 8 + pointerX * panX;
-        camera.position.y =
-          Math.cos(MILKY_WAY_HOLD_SECONDS * 0.1) * 5 + pointerY * panY;
+          Math.sin(elapsed * 0.05) * 0.04 - pointerY * pitchRange;
+        camera.position.x = Math.sin(elapsed * 0.12) * 8 + pointerX * panX;
+        camera.position.y = Math.cos(elapsed * 0.1) * 5 + pointerY * panY;
         camera.lookAt(pointerX * 6, pointerY * 4, 0);
+
+        holdRootEuler.set(
+          Math.sin(MILKY_WAY_HOLD_SECONDS * 0.05) * 0.04 -
+            pointerY * pitchRange,
+          MILKY_WAY_HOLD_SECONDS * 0.008 + pointerX * yawRange,
+          0
+        );
+        holdRootMatrix.makeRotationFromEuler(holdRootEuler);
+        meshLocalMatrix.makeRotationFromEuler(meshLocalEuler);
+        holdMeshWorld.multiplyMatrices(holdRootMatrix, meshLocalMatrix);
+        holdCamera.position.set(
+          Math.sin(MILKY_WAY_HOLD_SECONDS * 0.12) * 8 + pointerX * panX,
+          Math.cos(MILKY_WAY_HOLD_SECONDS * 0.1) * 5 + pointerY * panY,
+          CAMERA_Z
+        );
+        holdCamera.lookAt(pointerX * 6, pointerY * 4, 0);
+        holdCamera.updateMatrixWorld();
+        meshInHoldCam
+          .copy(holdCamera.matrixWorld)
+          .invert()
+          .multiply(holdMeshWorld);
+        milkyWay.group.matrix.copy(meshInHoldCam);
 
         for (const layer of starLayers) {
           layer.group.position.x = pointerX * layer.parallax;
