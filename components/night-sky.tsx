@@ -6,7 +6,7 @@ import { capDevicePixelRatio, startWebGLPlayback } from '@/lib/webgl-playback';
 const MAX_PIXEL_RATIO = 2;
 const CAMERA_Z = 600;
 const CAMERA_FOV = 70;
-/** Mesh-only hold at 4:00. Shader flow is uTime * 0.012 → 2.88. Stars still tick. */
+/** Mesh pattern at 4:00. Shader flow is uTime * 0.012 → 2.88. */
 const MILKY_WAY_HOLD_SECONDS = 4 * 60;
 
 type StarLayerConfig = {
@@ -23,52 +23,50 @@ type StarLayerConfig = {
 
 const STAR_LAYERS: StarLayerConfig[] = [
   {
-    count: 2000,
+    count: 3470,
     planeZ: -280,
     thickness: 220,
-    sizeMin: 6.2,
-    sizeMax: 9.2,
-    brightnessMin: 0.2,
-    brightnessMax: 0.38,
+    sizeMin: 3.1,
+    sizeMax: 4.6,
+    brightnessMin: 0.22,
+    brightnessMax: 0.4,
     twinkleAmp: 0.06,
     parallax: 4,
   },
   {
-    count: 1100,
+    count: 2000,
     planeZ: 80,
     thickness: 180,
-    sizeMin: 6.8,
-    sizeMax: 10.6,
-    brightnessMin: 0.26,
-    brightnessMax: 0.46,
+    sizeMin: 3.4,
+    sizeMax: 5.3,
+    brightnessMin: 0.28,
+    brightnessMax: 0.48,
     twinkleAmp: 0.08,
     parallax: 9,
   },
   {
-    count: 420,
+    count: 800,
     planeZ: 320,
     thickness: 120,
-    sizeMin: 7.4,
-    sizeMax: 12.2,
+    sizeMin: 3.7,
+    sizeMax: 6.1,
     brightnessMin: 0.34,
-    brightnessMax: 0.58,
+    brightnessMax: 0.56,
     twinkleAmp: 0.1,
     parallax: 16,
   },
   {
-    count: 40,
+    count: 67,
     planeZ: 460,
     thickness: 50,
-    sizeMin: 10,
-    sizeMax: 15.5,
-    brightnessMin: 0.62,
-    brightnessMax: 0.95,
+    sizeMin: 5,
+    sizeMax: 7.8,
+    brightnessMin: 0.58,
+    brightnessMax: 0.9,
     twinkleAmp: 0.04,
     parallax: 24,
   },
 ];
-
-const BAND_STAR_COUNT = 2200;
 
 /**
  * Naked-eye spectral-class counts from the Yale Bright Star Catalogue,
@@ -213,10 +211,6 @@ export default function NightSky() {
         starLayers.push(layer);
         root.add(layer.group);
       }
-
-      const bandLayer = createBandStarLayer(sharedDeps, starTexture);
-      starLayers.push(bandLayer);
-      root.add(bandLayer.group);
 
       const milkyWay = createMilkyWayBand({
         PlaneGeometry,
@@ -431,7 +425,7 @@ function createStarMaterial(
         vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
         gl_PointSize = max(
           aSize * uPixelRatio * (300.0 / max(-mvPosition.z, 80.0)),
-          1.8 * uPixelRatio
+          0.9 * uPixelRatio
         );
         gl_Position = projectionMatrix * mvPosition;
       }
@@ -547,58 +541,6 @@ function createViewportStarLayer(
   return { geometry, material, group, parallax: config.parallax };
 }
 
-function createBandStarLayer(
-  deps: {
-    BufferGeometry: typeof import('three').BufferGeometry;
-    Float32BufferAttribute: typeof import('three').Float32BufferAttribute;
-    Points: typeof import('three').Points;
-    ShaderMaterial: typeof import('three').ShaderMaterial;
-    Color: typeof import('three').Color;
-    AdditiveBlending: typeof import('three').AdditiveBlending;
-    Group: typeof import('three').Group;
-  },
-  map: import('three').Texture
-) {
-  const attrs = fillStarAttributes(
-    deps.Color,
-    BAND_STAR_COUNT,
-    () => randomBandPosition(),
-    4.8,
-    8.8,
-    0.55,
-    0.95,
-    0.12
-  );
-
-  const geometry = new deps.BufferGeometry();
-  geometry.setAttribute(
-    'position',
-    new deps.Float32BufferAttribute(attrs.positions, 3)
-  );
-  geometry.setAttribute(
-    'aColor',
-    new deps.Float32BufferAttribute(attrs.colors, 3)
-  );
-  geometry.setAttribute(
-    'aSize',
-    new deps.Float32BufferAttribute(attrs.sizes, 1)
-  );
-  geometry.setAttribute(
-    'aTwinkle',
-    new deps.Float32BufferAttribute(attrs.twinkles, 3)
-  );
-
-  const material = createStarMaterial(
-    deps.ShaderMaterial,
-    deps.AdditiveBlending,
-    map
-  );
-  const points = new deps.Points(geometry, material);
-  const group = new deps.Group();
-  group.add(points);
-  return { geometry, material, group, parallax: 7 };
-}
-
 function createMilkyWayBand(deps: {
   PlaneGeometry: typeof import('three').PlaneGeometry;
   ShaderMaterial: typeof import('three').ShaderMaterial;
@@ -685,33 +627,12 @@ function createMilkyWayBand(deps: {
 function randomViewportPosition(planeZ: number, thickness: number) {
   const dist = Math.max(CAMERA_Z - planeZ, 80);
   const halfHeight =
-    Math.tan(((CAMERA_FOV * Math.PI) / 180) * 0.5) * dist * 1.55;
-  const halfWidth = halfHeight * 2.35;
+    Math.tan(((CAMERA_FOV * Math.PI) / 180) * 0.5) * dist * 1.2;
+  const halfWidth = halfHeight * 1.85;
   return {
     x: (Math.random() * 2 - 1) * halfWidth,
     y: (Math.random() * 2 - 1) * halfHeight,
     z: planeZ + (Math.random() - 0.5) * thickness,
-  };
-}
-
-function randomBandPosition() {
-  const x = (Math.random() - 0.5) * 2500;
-  const u = Math.random() * Math.PI * 2;
-  const r = Math.pow(Math.random(), 0.42);
-  const y = r * Math.cos(u) * 62;
-  const z = r * Math.sin(u) * 130;
-  return rotateBandPoint(x, y, z);
-}
-
-function rotateBandPoint(x: number, y: number, z: number) {
-  const rx = Math.PI / 6;
-  const rz = -Math.PI / 6;
-  const y1 = y * Math.cos(rx) - z * Math.sin(rx);
-  const z1 = y * Math.sin(rx) + z * Math.cos(rx);
-  return {
-    x: x * Math.cos(rz) - y1 * Math.sin(rz),
-    y: x * Math.sin(rz) + y1 * Math.cos(rz),
-    z: z1,
   };
 }
 
