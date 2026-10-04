@@ -6,8 +6,6 @@ import { capDevicePixelRatio, startWebGLPlayback } from '@/lib/webgl-playback';
 const MAX_PIXEL_RATIO = 2;
 const CAMERA_Z = 600;
 const CAMERA_FOV = 70;
-/** Mesh-only hold at 4:00. Shader flow is uTime * 0.012 → 2.88. Stars still tick. */
-const MILKY_WAY_HOLD_SECONDS = 4 * 60;
 
 type StarLayerConfig = {
   count: number;
@@ -23,52 +21,50 @@ type StarLayerConfig = {
 
 const STAR_LAYERS: StarLayerConfig[] = [
   {
-    count: 2000,
+    count: 3800,
     planeZ: -280,
     thickness: 220,
     sizeMin: 6.2,
     sizeMax: 9.2,
-    brightnessMin: 0.2,
-    brightnessMax: 0.38,
+    brightnessMin: 0.18,
+    brightnessMax: 0.34,
     twinkleAmp: 0.06,
     parallax: 4,
   },
   {
-    count: 1100,
+    count: 2200,
     planeZ: 80,
     thickness: 180,
     sizeMin: 6.8,
     sizeMax: 10.6,
-    brightnessMin: 0.26,
-    brightnessMax: 0.46,
+    brightnessMin: 0.24,
+    brightnessMax: 0.42,
     twinkleAmp: 0.08,
     parallax: 9,
   },
   {
-    count: 420,
+    count: 900,
     planeZ: 320,
     thickness: 120,
     sizeMin: 7.4,
     sizeMax: 12.2,
-    brightnessMin: 0.34,
-    brightnessMax: 0.58,
+    brightnessMin: 0.3,
+    brightnessMax: 0.52,
     twinkleAmp: 0.1,
     parallax: 16,
   },
   {
-    count: 40,
+    count: 80,
     planeZ: 460,
     thickness: 50,
     sizeMin: 10,
     sizeMax: 15.5,
-    brightnessMin: 0.62,
-    brightnessMax: 0.95,
+    brightnessMin: 0.55,
+    brightnessMax: 0.88,
     twinkleAmp: 0.04,
     parallax: 24,
   },
 ];
-
-const BAND_STAR_COUNT = 2200;
 
 /**
  * Naked-eye spectral-class counts from the Yale Bright Star Catalogue,
@@ -111,8 +107,6 @@ export default function NightSky() {
     let onPointerMove: ((event: PointerEvent) => void) | null = null;
     let onPointerLeave: (() => void) | null = null;
     let renderer: import('three').WebGLRenderer | null = null;
-    let milkyGeometry: import('three').BufferGeometry | null = null;
-    let milkyMaterial: import('three').ShaderMaterial | null = null;
     let starTexture: import('three').Texture | null = null;
     const starLayers: {
       geometry: import('three').BufferGeometry;
@@ -139,10 +133,6 @@ export default function NightSky() {
         Group,
         AdditiveBlending,
         Texture,
-        PlaneGeometry,
-        Mesh,
-        Euler,
-        Matrix4,
       } = THREE;
 
       const scene = new Scene();
@@ -150,8 +140,6 @@ export default function NightSky() {
 
       const camera = new PerspectiveCamera(CAMERA_FOV, 1, 1, 4000);
       camera.position.z = CAMERA_Z;
-      scene.add(camera);
-      const holdCamera = new PerspectiveCamera(CAMERA_FOV, 1, 1, 4000);
 
       renderer = new WebGLRenderer({
         antialias: false,
@@ -172,8 +160,6 @@ export default function NightSky() {
         const height = window.innerHeight;
         camera.aspect = width / height;
         camera.updateProjectionMatrix();
-        holdCamera.aspect = width / height;
-        holdCamera.updateProjectionMatrix();
         renderer.setPixelRatio(
           capDevicePixelRatio(window.devicePixelRatio || 1)
         );
@@ -214,31 +200,6 @@ export default function NightSky() {
         root.add(layer.group);
       }
 
-      const bandLayer = createBandStarLayer(sharedDeps, starTexture);
-      starLayers.push(bandLayer);
-      root.add(bandLayer.group);
-
-      const milkyWay = createMilkyWayBand({
-        PlaneGeometry,
-        ShaderMaterial,
-        Mesh,
-        AdditiveBlending,
-        Group,
-        DoubleSide: THREE.DoubleSide,
-      });
-      milkyGeometry = milkyWay.geometry;
-      milkyMaterial = milkyWay.material;
-      milkyWay.group.rotation.set(0, 0, 0);
-      milkyWay.group.matrixAutoUpdate = false;
-      camera.add(milkyWay.group);
-
-      const holdRootEuler = new Euler();
-      const meshLocalEuler = new Euler(Math.PI / 6, 0, -Math.PI / 6);
-      const holdRootMatrix = new Matrix4();
-      const meshLocalMatrix = new Matrix4();
-      const holdMeshWorld = new Matrix4();
-      const meshInHoldCam = new Matrix4();
-
       setRendererSize();
 
       let elapsed = 0;
@@ -269,7 +230,7 @@ export default function NightSky() {
       document.documentElement.addEventListener('mouseleave', onPointerLeave);
 
       const renderFrame = (dt: number) => {
-        if (!renderer || !milkyMaterial) {
+        if (!renderer) {
           return;
         }
 
@@ -285,34 +246,11 @@ export default function NightSky() {
         camera.position.y = Math.cos(elapsed * 0.1) * 5 + pointerY * panY;
         camera.lookAt(pointerX * 6, pointerY * 4, 0);
 
-        holdRootEuler.set(
-          Math.sin(MILKY_WAY_HOLD_SECONDS * 0.05) * 0.04 -
-            pointerY * pitchRange,
-          MILKY_WAY_HOLD_SECONDS * 0.008 + pointerX * yawRange,
-          0
-        );
-        holdRootMatrix.makeRotationFromEuler(holdRootEuler);
-        meshLocalMatrix.makeRotationFromEuler(meshLocalEuler);
-        holdMeshWorld.multiplyMatrices(holdRootMatrix, meshLocalMatrix);
-        holdCamera.position.set(
-          Math.sin(MILKY_WAY_HOLD_SECONDS * 0.12) * 8 + pointerX * panX,
-          Math.cos(MILKY_WAY_HOLD_SECONDS * 0.1) * 5 + pointerY * panY,
-          CAMERA_Z
-        );
-        holdCamera.lookAt(pointerX * 6, pointerY * 4, 0);
-        holdCamera.updateMatrixWorld();
-        meshInHoldCam
-          .copy(holdCamera.matrixWorld)
-          .invert()
-          .multiply(holdMeshWorld);
-        milkyWay.group.matrix.copy(meshInHoldCam);
-
         for (const layer of starLayers) {
           layer.group.position.x = pointerX * layer.parallax;
           layer.group.position.y = pointerY * layer.parallax;
           layer.material.uniforms.uTime.value = elapsed;
         }
-        milkyMaterial.uniforms.uTime.value = MILKY_WAY_HOLD_SECONDS;
         renderer.render(scene, camera);
       };
 
@@ -347,8 +285,6 @@ export default function NightSky() {
         layer.geometry.dispose();
         layer.material.dispose();
       }
-      milkyGeometry?.dispose();
-      milkyMaterial?.dispose();
       starTexture?.dispose();
       if (renderer) {
         renderer.dispose();
@@ -547,141 +483,6 @@ function createViewportStarLayer(
   return { geometry, material, group, parallax: config.parallax };
 }
 
-function createBandStarLayer(
-  deps: {
-    BufferGeometry: typeof import('three').BufferGeometry;
-    Float32BufferAttribute: typeof import('three').Float32BufferAttribute;
-    Points: typeof import('three').Points;
-    ShaderMaterial: typeof import('three').ShaderMaterial;
-    Color: typeof import('three').Color;
-    AdditiveBlending: typeof import('three').AdditiveBlending;
-    Group: typeof import('three').Group;
-  },
-  map: import('three').Texture
-) {
-  const attrs = fillStarAttributes(
-    deps.Color,
-    BAND_STAR_COUNT,
-    () => randomBandPosition(),
-    4.8,
-    8.8,
-    0.55,
-    0.95,
-    0.12
-  );
-
-  const geometry = new deps.BufferGeometry();
-  geometry.setAttribute(
-    'position',
-    new deps.Float32BufferAttribute(attrs.positions, 3)
-  );
-  geometry.setAttribute(
-    'aColor',
-    new deps.Float32BufferAttribute(attrs.colors, 3)
-  );
-  geometry.setAttribute(
-    'aSize',
-    new deps.Float32BufferAttribute(attrs.sizes, 1)
-  );
-  geometry.setAttribute(
-    'aTwinkle',
-    new deps.Float32BufferAttribute(attrs.twinkles, 3)
-  );
-
-  const material = createStarMaterial(
-    deps.ShaderMaterial,
-    deps.AdditiveBlending,
-    map
-  );
-  const points = new deps.Points(geometry, material);
-  const group = new deps.Group();
-  group.add(points);
-  return { geometry, material, group, parallax: 7 };
-}
-
-function createMilkyWayBand(deps: {
-  PlaneGeometry: typeof import('three').PlaneGeometry;
-  ShaderMaterial: typeof import('three').ShaderMaterial;
-  Mesh: typeof import('three').Mesh;
-  AdditiveBlending: typeof import('three').AdditiveBlending;
-  Group: typeof import('three').Group;
-  DoubleSide: import('three').Side;
-}) {
-  const geometry = new deps.PlaneGeometry(3200, 780, 1, 1);
-  const material = new deps.ShaderMaterial({
-    uniforms: {
-      uTime: { value: MILKY_WAY_HOLD_SECONDS },
-    },
-    vertexShader: `
-      varying vec2 vUv;
-      void main() {
-        vUv = uv;
-        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-      }
-    `,
-    fragmentShader: `
-      varying vec2 vUv;
-      uniform float uTime;
-
-      float hash(vec2 p) {
-        return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
-      }
-
-      float noise(vec2 p) {
-        vec2 i = floor(p);
-        vec2 f = fract(p);
-        float a = hash(i);
-        float b = hash(i + vec2(1.0, 0.0));
-        float c = hash(i + vec2(0.0, 1.0));
-        float d = hash(i + vec2(1.0, 1.0));
-        vec2 u = f * f * (3.0 - 2.0 * f);
-        return mix(a, b, u.x) + (c - a) * u.y * (1.0 - u.x) + (d - b) * u.x * u.y;
-      }
-
-      float fbm(vec2 p) {
-        float value = 0.0;
-        float amp = 0.5;
-        for (int i = 0; i < 5; i++) {
-          value += amp * noise(p);
-          p *= 2.05;
-          amp *= 0.55;
-        }
-        return value;
-      }
-
-      void main() {
-        vec2 uv = vUv * 2.0 - 1.0;
-        float core = exp(-pow(uv.y * 2.15, 2.0));
-        float halo = exp(-pow(uv.y * 0.85, 2.0)) * 0.62;
-        float along = 0.5 + 0.5 * fbm(vec2(uv.x * 2.6, uv.y * 4.2 + uTime * 0.012));
-        float lanes = smoothstep(0.22, 0.8, fbm(vec2(uv.x * 5.1 + 8.0, uv.y * 1.7)));
-        float glow = (core + halo) * along * mix(0.5, 1.0, lanes);
-        float edge = smoothstep(1.0, 0.28, abs(uv.x));
-        glow *= edge;
-
-        vec3 cool = vec3(0.68, 0.78, 1.0);
-        vec3 warm = vec3(1.0, 0.86, 0.7);
-        vec3 col = mix(cool, warm, smoothstep(0.3, 0.75, along));
-        float alpha = glow * 0.48;
-        gl_FragColor = vec4(col * glow * 1.25, alpha);
-      }
-    `,
-    transparent: true,
-    depthWrite: false,
-    depthTest: false,
-    blending: deps.AdditiveBlending,
-    toneMapped: false,
-    side: deps.DoubleSide,
-  });
-
-  const mesh = new deps.Mesh(geometry, material);
-  const group = new deps.Group();
-  group.add(mesh);
-  group.rotation.x = Math.PI / 6;
-  group.rotation.z = -Math.PI / 6;
-  return { group, geometry, material };
-}
-
 function randomViewportPosition(planeZ: number, thickness: number) {
   const dist = Math.max(CAMERA_Z - planeZ, 80);
   const halfHeight =
@@ -691,27 +492,6 @@ function randomViewportPosition(planeZ: number, thickness: number) {
     x: (Math.random() * 2 - 1) * halfWidth,
     y: (Math.random() * 2 - 1) * halfHeight,
     z: planeZ + (Math.random() - 0.5) * thickness,
-  };
-}
-
-function randomBandPosition() {
-  const x = (Math.random() - 0.5) * 2500;
-  const u = Math.random() * Math.PI * 2;
-  const r = Math.pow(Math.random(), 0.42);
-  const y = r * Math.cos(u) * 62;
-  const z = r * Math.sin(u) * 130;
-  return rotateBandPoint(x, y, z);
-}
-
-function rotateBandPoint(x: number, y: number, z: number) {
-  const rx = Math.PI / 6;
-  const rz = -Math.PI / 6;
-  const y1 = y * Math.cos(rx) - z * Math.sin(rx);
-  const z1 = y * Math.sin(rx) + z * Math.cos(rx);
-  return {
-    x: x * Math.cos(rz) - y1 * Math.sin(rz),
-    y: x * Math.sin(rz) + y1 * Math.cos(rz),
-    z: z1,
   };
 }
 
