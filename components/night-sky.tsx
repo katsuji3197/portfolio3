@@ -6,7 +6,7 @@ import { capDevicePixelRatio, startWebGLPlayback } from '@/lib/webgl-playback';
 const MAX_PIXEL_RATIO = 2;
 const CAMERA_Z = 600;
 const CAMERA_FOV = 70;
-/** Milky Way mesh pose at 4:00. Shader flow is uTime * 0.012 → 2.88. */
+/** Mesh-only hold at 4:00. Shader flow is uTime * 0.012 → 2.88. Stars still tick. */
 const MILKY_WAY_HOLD_SECONDS = 4 * 60;
 
 type StarLayerConfig = {
