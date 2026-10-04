@@ -23,44 +23,44 @@ type StarLayerConfig = {
 
 const STAR_LAYERS: StarLayerConfig[] = [
   {
-    count: 5200,
+    count: 3470,
     planeZ: -280,
     thickness: 220,
-    sizeMin: 6.2,
-    sizeMax: 9.2,
+    sizeMin: 3.1,
+    sizeMax: 4.6,
     brightnessMin: 0.22,
     brightnessMax: 0.4,
     twinkleAmp: 0.06,
     parallax: 4,
   },
   {
-    count: 3000,
+    count: 2000,
     planeZ: 80,
     thickness: 180,
-    sizeMin: 6.8,
-    sizeMax: 10.6,
+    sizeMin: 3.4,
+    sizeMax: 5.3,
     brightnessMin: 0.28,
     brightnessMax: 0.48,
     twinkleAmp: 0.08,
     parallax: 9,
   },
   {
-    count: 1200,
+    count: 800,
     planeZ: 320,
     thickness: 120,
-    sizeMin: 7.4,
-    sizeMax: 12.2,
+    sizeMin: 3.7,
+    sizeMax: 6.1,
     brightnessMin: 0.34,
     brightnessMax: 0.56,
     twinkleAmp: 0.1,
     parallax: 16,
   },
   {
-    count: 100,
+    count: 67,
     planeZ: 460,
     thickness: 50,
-    sizeMin: 10,
-    sizeMax: 15.5,
+    sizeMin: 5,
+    sizeMax: 7.8,
     brightnessMin: 0.58,
     brightnessMax: 0.9,
     twinkleAmp: 0.04,
@@ -139,6 +139,8 @@ export default function NightSky() {
         Texture,
         PlaneGeometry,
         Mesh,
+        Euler,
+        Matrix4,
       } = THREE;
 
       const scene = new Scene();
@@ -146,6 +148,8 @@ export default function NightSky() {
 
       const camera = new PerspectiveCamera(CAMERA_FOV, 1, 1, 4000);
       camera.position.z = CAMERA_Z;
+      scene.add(camera);
+      const holdCamera = new PerspectiveCamera(CAMERA_FOV, 1, 1, 4000);
 
       renderer = new WebGLRenderer({
         antialias: false,
@@ -166,6 +170,8 @@ export default function NightSky() {
         const height = window.innerHeight;
         camera.aspect = width / height;
         camera.updateProjectionMatrix();
+        holdCamera.aspect = width / height;
+        holdCamera.updateProjectionMatrix();
         renderer.setPixelRatio(
           capDevicePixelRatio(window.devicePixelRatio || 1)
         );
@@ -216,7 +222,16 @@ export default function NightSky() {
       });
       milkyGeometry = milkyWay.geometry;
       milkyMaterial = milkyWay.material;
-      root.add(milkyWay.group);
+      milkyWay.group.rotation.set(0, 0, 0);
+      milkyWay.group.matrixAutoUpdate = false;
+      camera.add(milkyWay.group);
+
+      const holdRootEuler = new Euler();
+      const meshLocalEuler = new Euler(Math.PI / 6, 0, -Math.PI / 6);
+      const holdRootMatrix = new Matrix4();
+      const meshLocalMatrix = new Matrix4();
+      const holdMeshWorld = new Matrix4();
+      const meshInHoldCam = new Matrix4();
 
       setRendererSize();
 
@@ -263,6 +278,28 @@ export default function NightSky() {
         camera.position.x = Math.sin(elapsed * 0.12) * 8 + pointerX * panX;
         camera.position.y = Math.cos(elapsed * 0.1) * 5 + pointerY * panY;
         camera.lookAt(pointerX * 6, pointerY * 4, 0);
+
+        holdRootEuler.set(
+          Math.sin(MILKY_WAY_HOLD_SECONDS * 0.05) * 0.04 -
+            pointerY * pitchRange,
+          MILKY_WAY_HOLD_SECONDS * 0.008 + pointerX * yawRange,
+          0
+        );
+        holdRootMatrix.makeRotationFromEuler(holdRootEuler);
+        meshLocalMatrix.makeRotationFromEuler(meshLocalEuler);
+        holdMeshWorld.multiplyMatrices(holdRootMatrix, meshLocalMatrix);
+        holdCamera.position.set(
+          Math.sin(MILKY_WAY_HOLD_SECONDS * 0.12) * 8 + pointerX * panX,
+          Math.cos(MILKY_WAY_HOLD_SECONDS * 0.1) * 5 + pointerY * panY,
+          CAMERA_Z
+        );
+        holdCamera.lookAt(pointerX * 6, pointerY * 4, 0);
+        holdCamera.updateMatrixWorld();
+        meshInHoldCam
+          .copy(holdCamera.matrixWorld)
+          .invert()
+          .multiply(holdMeshWorld);
+        milkyWay.group.matrix.copy(meshInHoldCam);
 
         for (const layer of starLayers) {
           layer.group.position.x = pointerX * layer.parallax;
@@ -388,7 +425,7 @@ function createStarMaterial(
         vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
         gl_PointSize = max(
           aSize * uPixelRatio * (300.0 / max(-mvPosition.z, 80.0)),
-          1.8 * uPixelRatio
+          0.9 * uPixelRatio
         );
         gl_Position = projectionMatrix * mvPosition;
       }
