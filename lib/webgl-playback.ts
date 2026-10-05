@@ -3,6 +3,7 @@ type PlaybackFrame = (nowMs: number, dtSec: number) => void;
 /**
  * requestAnimationFrame を、タブ非表示または対象が画面外のときは止める。
  * 再開直後の dt は 0 にして、停止中の経過時間でアニメが飛ばないようにする。
+ * WebGL / WebGPU のどちらでも、このループから描画する。
  */
 export function startWebGLPlayback(
   target: Element,
