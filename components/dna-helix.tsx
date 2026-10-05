@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import { canUseWebGPU, enqueueGpuMount } from '@/lib/gpu-renderer';
 import type { DnaMountOptions } from '@/lib/dna-geometry';
 import type { DnaRuntime } from '@/lib/night-sky-runtime';
+import { clearRendererDebug, reportRendererDebug } from '@/lib/renderer-debug';
 import { startWebGLPlayback } from '@/lib/webgl-playback';
 
 type DNAHelixProps = {
@@ -73,8 +74,9 @@ export default function DNAHelix({
       endViewport: { x: endX, y: endY },
     };
 
-    const reveal = (next: DnaRuntime) => {
+    const reveal = (next: DnaRuntime, fallback: boolean) => {
       runtime = next;
+      reportRendererDebug('dna', next.backend, fallback);
       next.domElement.style.opacity = '0';
       next.domElement.style.transition = 'opacity 3s ease';
       fadeFrame = requestAnimationFrame(() => {
@@ -116,23 +118,37 @@ export default function DNAHelix({
         next.dispose();
         return;
       }
-      reveal(next);
+      reveal(next, true);
     };
 
     const setup = async () => {
+      let fallback = false;
       const mounted = await enqueueGpuMount(
-        () =>
-          mountDna(container, options, {
-            onDeviceLost: () => {
-              void fallbackToWebGL();
-            },
-          }),
+        async () => {
+          if (await canUseWebGPU()) {
+            try {
+              const { mountWebGPUDna } = await import('@/lib/dna-webgpu');
+              const next = await mountWebGPUDna(container, options, {
+                onDeviceLost: () => {
+                  void fallbackToWebGL();
+                },
+              });
+              fallback = next.backend !== 'webgpu';
+              return next;
+            } catch (error) {
+              console.warn('DNA WebGPU failed; using WebGL.', error);
+              fallback = true;
+            }
+          }
+          const { mountWebGLDna } = await import('@/lib/dna-webgl');
+          return mountWebGLDna(container, options);
+        },
         () => disposed
       );
       if (!mounted || disposed) {
         return;
       }
-      reveal(mounted);
+      reveal(mounted, fallback);
     };
 
     void setup();
@@ -146,6 +162,7 @@ export default function DNAHelix({
       }
       runtime?.dispose();
       runtime = null;
+      clearRendererDebug('dna');
     };
   }, [
     radius,
@@ -170,21 +187,4 @@ export default function DNAHelix({
       style={{ width: '100%', height: '100%', ...style }}
     />
   );
-}
-
-async function mountDna(
-  container: HTMLElement,
-  options: DnaMountOptions,
-  hooks?: { onDeviceLost?: () => void }
-): Promise<DnaRuntime> {
-  if (await canUseWebGPU()) {
-    try {
-      const { mountWebGPUDna } = await import('@/lib/dna-webgpu');
-      return await mountWebGPUDna(container, options, hooks);
-    } catch (error) {
-      console.warn('DNA WebGPU failed; using WebGL.', error);
-    }
-  }
-  const { mountWebGLDna } = await import('@/lib/dna-webgl');
-  return mountWebGLDna(container, options);
 }

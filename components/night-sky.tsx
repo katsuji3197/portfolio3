@@ -3,6 +3,12 @@
 import { useEffect, useRef } from 'react';
 import { canUseWebGPU, enqueueGpuMount } from '@/lib/gpu-renderer';
 import type { NightSkyRuntime } from '@/lib/night-sky-runtime';
+import {
+  clearRendererDebug,
+  isRendererDebugEnabled,
+  reportRendererDebug,
+  watchRendererDebugUrl,
+} from '@/lib/renderer-debug';
 import { startWebGLPlayback } from '@/lib/webgl-playback';
 
 export default function NightSky() {
@@ -22,8 +28,13 @@ export default function NightSky() {
     let onPointerLeave: (() => void) | null = null;
     let recovering = false;
 
-    const play = (next: NightSkyRuntime) => {
+    if (isRendererDebugEnabled()) {
+      watchRendererDebugUrl();
+    }
+
+    const play = (next: NightSkyRuntime, fallback: boolean) => {
       runtime = next;
+      reportRendererDebug('sky', next.backend, fallback);
       next.renderFrame(0);
       stopPlayback?.();
       stopPlayback = startWebGLPlayback(container, (_now, dt) => {
@@ -55,17 +66,31 @@ export default function NightSky() {
         next.dispose();
         return;
       }
-      play(next);
+      play(next, true);
     };
 
     const setup = async () => {
+      let fallback = false;
       const mounted = await enqueueGpuMount(
-        () =>
-          mountSky(container, {
-            onDeviceLost: () => {
-              void fallbackToWebGL();
-            },
-          }),
+        async () => {
+          if (await canUseWebGPU()) {
+            try {
+              const { mountWebGPUSky } = await import('@/lib/night-sky-webgpu');
+              const next = await mountWebGPUSky(container, {
+                onDeviceLost: () => {
+                  void fallbackToWebGL();
+                },
+              });
+              fallback = next.backend !== 'webgpu';
+              return next;
+            } catch (error) {
+              console.warn('Night sky WebGPU failed; using WebGL.', error);
+              fallback = true;
+            }
+          }
+          const { mountWebGLSky } = await import('@/lib/night-sky-webgl');
+          return mountWebGLSky(container);
+        },
         () => disposed
       );
       if (!mounted || disposed) {
@@ -88,7 +113,7 @@ export default function NightSky() {
       };
       window.addEventListener('pointermove', onPointerMove, { passive: true });
       document.documentElement.addEventListener('mouseleave', onPointerLeave);
-      play(mounted);
+      play(mounted, fallback);
     };
 
     void setup();
@@ -110,6 +135,7 @@ export default function NightSky() {
       }
       runtime?.dispose();
       runtime = null;
+      clearRendererDebug('sky');
     };
   }, []);
 
@@ -123,20 +149,4 @@ export default function NightSky() {
       }}
     />
   );
-}
-
-async function mountSky(
-  container: HTMLElement,
-  hooks?: { onDeviceLost?: () => void }
-): Promise<NightSkyRuntime> {
-  if (await canUseWebGPU()) {
-    try {
-      const { mountWebGPUSky } = await import('@/lib/night-sky-webgpu');
-      return await mountWebGPUSky(container, hooks);
-    } catch (error) {
-      console.warn('Night sky WebGPU failed; using WebGL.', error);
-    }
-  }
-  const { mountWebGLSky } = await import('@/lib/night-sky-webgl');
-  return mountWebGLSky(container);
 }
