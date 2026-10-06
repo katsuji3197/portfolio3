@@ -13,10 +13,10 @@ import {
 const zero = () => 0;
 
 describe('petalSpawnDelay', () => {
-  it('stays inside 5 to 8 seconds', () => {
-    expect(petalSpawnDelay(() => 0)).toBe(5);
-    expect(petalSpawnDelay(() => 1)).toBe(8);
-    expect(petalSpawnDelay(() => 0.5)).toBe(6.5);
+  it('stays inside 8 to 11 seconds', () => {
+    expect(petalSpawnDelay(() => 0)).toBe(8);
+    expect(petalSpawnDelay(() => 1)).toBe(11);
+    expect(petalSpawnDelay(() => 0.5)).toBe(9.5);
   });
 });
 
@@ -25,13 +25,13 @@ describe('stepPetalSystem', () => {
     const system = createPetalSystem(zero);
     let born: PetalPose[] = [];
     let elapsed = 0;
-    while (born.length === 0 && elapsed < 6) {
+    while (born.length === 0 && elapsed < 12) {
       born = stepPetalSystem(system, 0.05);
       elapsed += 0.05;
     }
 
-    expect(elapsed).toBeGreaterThanOrEqual(5);
-    expect(elapsed).toBeLessThan(5.2);
+    expect(elapsed).toBeGreaterThanOrEqual(8);
+    expect(elapsed).toBeLessThan(8.2);
     expect(born).toHaveLength(1);
     expect(born[0].alpha).toBeLessThan(0.25);
     expect(born[0].y).toBeGreaterThan(0.6);
@@ -47,7 +47,7 @@ describe('stepPetalSystem', () => {
       stepPetalSystem(system, 0.05);
     }
     const later = stepPetalSystem(system, 0.05);
-    expect(later[0].y).toBeLessThan(falling[0].y - 0.4);
+    expect(later[0].y).toBeLessThan(falling[0].y - 0.25);
     expect(later[0].x).toBeLessThan(falling[0].x - 0.3);
     expect(later[0].alpha).toBeGreaterThan(born[0].alpha);
   });
@@ -59,7 +59,7 @@ describe('stepPetalSystem', () => {
     let prevCount = 0;
     let solo: PetalPose[] | null = null;
 
-    for (let i = 0; i < 900; i += 1) {
+    for (let i = 0; i < 1200; i += 1) {
       const poses = stepPetalSystem(system, 0.05);
       if (poses.length > prevCount) {
         births.push(poses.reduce((a, b) => (a.alpha < b.alpha ? a : b)));
@@ -93,6 +93,37 @@ describe('stepPetalSystem', () => {
     expect(spread(drift)).toBeGreaterThan(0.12);
   });
 
+  it('catches the air, then keeps falling with the same wind', () => {
+    const track = firstPetalTrack(zero);
+    const vertical = windowSpeeds(track.y);
+    expect(vertical.some(speed => speed > -0.05)).toBe(true);
+    expect(vertical.some(speed => speed < -0.18)).toBe(true);
+    expect(track.y[track.y.length - 1]).toBeLessThan(track.y[0] - 0.8);
+    expect(track.x[track.x.length - 1]).toBeLessThan(track.x[0] - 0.4);
+
+    const varied = createPetalSystem(mulberry32(3));
+    const rises: number[] = [];
+    let prev = 0;
+    let current: number[] = [];
+    for (let i = 0; i < 1200; i += 1) {
+      const poses = stepPetalSystem(varied, 0.05);
+      if (poses.length === 1) {
+        if (prev !== 1) {
+          current = [];
+        }
+        current.push(poses[0].y);
+      } else if (current.length > 20) {
+        rises.push(Math.max(...windowSpeeds(current)));
+        current = [];
+      }
+      prev = poses.length;
+    }
+    if (current.length > 20) {
+      rises.push(Math.max(...windowSpeeds(current)));
+    }
+    expect(Math.max(...rises)).toBeGreaterThan(0.02);
+  });
+
   it('keeps at most a couple of petals and removes them off-screen', () => {
     const system = createPetalSystem(zero);
     let maxAlive = 0;
@@ -121,7 +152,7 @@ describe('stepPetalSystem', () => {
   it('does not advance while reduced motion is on', () => {
     let reduced = false;
     const simulation = createCherryPetalSimulation(zero, () => reduced);
-    stepUntil(simulation.step, 6);
+    stepUntil(simulation.step, 9);
     expect(simulation.system.petals.length).toBe(1);
 
     reduced = true;
@@ -158,6 +189,40 @@ describe('applyPetalPoses', () => {
     expect(views[1].opacity).toBe(0);
   });
 });
+
+function firstPetalTrack(rng: () => number) {
+  const system = createPetalSystem(rng);
+  const y: number[] = [];
+  const x: number[] = [];
+  let tracking = false;
+  for (let i = 0; i < 500 && y.length < 400; i += 1) {
+    const poses = stepPetalSystem(system, 0.05);
+    if (!tracking) {
+      if (poses.length === 0) {
+        continue;
+      }
+      tracking = true;
+    }
+    if (poses.length === 0) {
+      break;
+    }
+    if (y.length > 0 && Math.abs(poses[0].y - y[y.length - 1]) > 0.45) {
+      break;
+    }
+    y.push(poses[0].y);
+    x.push(poses[0].x);
+  }
+  return { x, y };
+}
+
+function windowSpeeds(samples: number[]) {
+  const speeds: number[] = [];
+  const span = 8;
+  for (let i = span; i < samples.length; i += 1) {
+    speeds.push((samples[i] - samples[i - span]) / (span * 0.05));
+  }
+  return speeds;
+}
 
 function spread(values: number[]) {
   return Math.max(...values) - Math.min(...values);

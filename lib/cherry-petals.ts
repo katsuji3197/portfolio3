@@ -4,8 +4,8 @@
  * without a jump. Both renderers draw whatever `step` returns.
  */
 
-export const PETAL_SPAWN_MIN_SEC = 5;
-export const PETAL_SPAWN_MAX_SEC = 8;
+export const PETAL_SPAWN_MIN_SEC = 8;
+export const PETAL_SPAWN_MAX_SEC = 11;
 export const PETAL_MAX_ALIVE = 2;
 export const PETAL_DISTANCE = 210;
 export const PETAL_POOL = PETAL_MAX_ALIVE;
@@ -29,6 +29,14 @@ export type PetalPose = {
   scale: number;
 };
 
+type Gust = {
+  center: number;
+  rise: number;
+  hold: number;
+  /** 1 cancels the fall while the gust holds. A little over 1 is a slight rise. */
+  strength: number;
+};
+
 type Petal = {
   x0: number;
   y0: number;
@@ -46,6 +54,7 @@ type Petal = {
   arcFreq: number;
   arcPhase: number;
   yBob: number;
+  gusts: Gust[];
   rot0: number;
   rotSpeed: number;
   tumbleSpeed: number;
@@ -207,7 +216,8 @@ function spawnPetal(rng: () => number): Petal {
     arcAmp: 0.04 + rng() * 0.34,
     arcFreq: 0.22 + rng() * 0.55,
     arcPhase: rng() * Math.PI * 2,
-    yBob: 0.02 + rng() * 0.09,
+    yBob: 0.012 + rng() * 0.03,
+    gusts: planGusts(rng),
     rot0: rng() * Math.PI * 2,
     rotSpeed: (rng() - 0.5) * 2.4,
     tumbleSpeed: 0.7 + rng() * 1.5,
@@ -218,6 +228,61 @@ function spawnPetal(rng: () => number): Petal {
     // Half of the previous 20–26 quad. Glow texture is unchanged.
     scale: 10 + rng() * 3,
   };
+}
+
+function planGusts(rng: () => number): Gust[] {
+  const count = rng() < 0.22 ? 1 : 2;
+  const gusts: Gust[] = [];
+  let cursor = 0.55 + rng() * 0.7;
+  for (let i = 0; i < count; i += 1) {
+    const rise = 0.32 + rng() * 0.22;
+    const hold = 0.4 + rng() * 0.75;
+    const strength = 0.95 + rng() * 0.5;
+    gusts.push({
+      center: cursor + rise + hold / 2,
+      rise,
+      hold,
+      strength,
+    });
+    cursor += rise * 2 + hold + 0.9 + rng() * 1.0;
+  }
+  return gusts;
+}
+
+/** Extra height from gusts that cancel or briefly reverse the baseline fall. */
+function catchLift(petal: Petal, age: number): number {
+  let lift = 0;
+  for (const gust of petal.gusts) {
+    lift += petal.fall * gust.strength * gustIntegral(age, gust);
+  }
+  return lift;
+}
+
+function gustIntegral(age: number, gust: Gust): number {
+  const start = gust.center - (gust.rise + gust.hold / 2);
+  const riseEnd = start + gust.rise;
+  const holdEnd = riseEnd + gust.hold;
+  const end = holdEnd + gust.rise;
+  if (age <= start) {
+    return 0;
+  }
+  if (age < riseEnd) {
+    const u = (age - start) / gust.rise;
+    return gust.rise * smoothIntegral(u);
+  }
+  const riseArea = gust.rise * 0.5;
+  if (age < holdEnd) {
+    return riseArea + (age - riseEnd);
+  }
+  if (age < end) {
+    const u = (age - holdEnd) / gust.rise;
+    return riseArea + gust.hold + gust.rise * (u - smoothIntegral(u));
+  }
+  return gust.hold + gust.rise;
+}
+
+function smoothIntegral(u: number): number {
+  return u * u * u - 0.5 * u * u * u * u;
 }
 
 function poseOf(petal: Petal): PetalPose {
@@ -235,7 +300,8 @@ function poseOf(petal: Petal): PetalPose {
     petal.y0 -
     petal.fall * age +
     Math.sin(age * petal.swayFreq * 0.63 + petal.phase) * petal.yBob +
-    gust * petal.yBob * 0.45;
+    gust * petal.yBob * 0.45 +
+    catchLift(petal, age);
   const depth = clamp(
     petal.depth0 +
       petal.zDrift * age +
