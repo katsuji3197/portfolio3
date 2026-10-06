@@ -282,10 +282,32 @@ body {
 
 .prose-custom img {
   max-width: 100%;
+  width: auto;
   height: auto;
+  max-height: min(75vh, 40rem);
   border-radius: 0.5rem;
   margin: 2rem auto;
   display: block;
+}
+
+.prose-custom figure {
+  margin: 2.5rem 0 3rem;
+  max-width: 100%;
+}
+
+.prose-custom figure img {
+  margin: 0 auto;
+}
+
+.prose-custom figcaption {
+  margin: 0.75rem auto 0;
+  max-width: 40rem;
+  padding: 0 0.25rem;
+  font-size: 0.8125rem;
+  line-height: 1.65;
+  color: #a3a3a3;
+  text-align: center;
+  text-wrap: balance;
 }
 
 .prose-custom .mermaid-diagram {
