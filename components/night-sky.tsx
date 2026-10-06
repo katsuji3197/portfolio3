@@ -9,6 +9,12 @@ import {
   reportRendererDebug,
   watchRendererDebugUrl,
 } from '@/lib/renderer-debug';
+import {
+  browserSkyGyroEnvironment,
+  isCoarseHandheld,
+  prefersReducedMotion,
+  startSkyGyro,
+} from '@/lib/sky-gyro';
 import { startWebGLPlayback } from '@/lib/webgl-playback';
 
 export default function NightSky() {
@@ -26,7 +32,10 @@ export default function NightSky() {
     let onResize: (() => void) | null = null;
     let onPointerMove: ((event: PointerEvent) => void) | null = null;
     let onPointerLeave: (() => void) | null = null;
+    let stopGyro: (() => void) | null = null;
+    let gyroDriving = false;
     let recovering = false;
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
     if (isRendererDebugEnabled()) {
       watchRendererDebugUrl();
@@ -109,12 +118,42 @@ export default function NightSky() {
         );
       };
       onPointerLeave = () => {
+        if (gyroDriving) {
+          return;
+        }
         runtime?.setPointerTarget(0, 0);
       };
       window.addEventListener('pointermove', onPointerMove, { passive: true });
       document.documentElement.addEventListener('mouseleave', onPointerLeave);
+      connectGyro();
       play(mounted, fallback);
     };
+
+    const connectGyro = () => {
+      stopGyro?.();
+      stopGyro = null;
+      gyroDriving = false;
+      if (
+        disposed ||
+        !isCoarseHandheld() ||
+        prefersReducedMotion() ||
+        typeof DeviceOrientationEvent === 'undefined'
+      ) {
+        return;
+      }
+      stopGyro = startSkyGyro(pointer => {
+        gyroDriving = true;
+        runtime?.setPointerTarget(pointer.x, pointer.y);
+      }, browserSkyGyroEnvironment());
+    };
+
+    const onReducedMotion = () => {
+      if (reducedMotion.matches) {
+        runtime?.setPointerTarget(0, 0);
+      }
+      connectGyro();
+    };
+    reducedMotion.addEventListener('change', onReducedMotion);
 
     void setup();
 
@@ -133,6 +172,8 @@ export default function NightSky() {
           onPointerLeave
         );
       }
+      reducedMotion.removeEventListener('change', onReducedMotion);
+      stopGyro?.();
       runtime?.dispose();
       runtime = null;
       clearRendererDebug('sky');

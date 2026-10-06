@@ -135,6 +135,35 @@ export function createWebGPUStarMaterial(renderer: WebGPURenderer) {
   return { material, sprite, uTime, uPixelRatio };
 }
 
+/**
+ * Soft petal. WebGL's straight-alpha page blend multiplies by alpha again,
+ * so this writes rgb*alpha and lets SrcAlpha blending multiply once more.
+ */
+export function createWebGPUPetalMaterial(sprite: CanvasTexture) {
+  const uOpacity = uniform(0);
+  const fragmentNode = Fn(() => {
+    const texel = texture(sprite, uv());
+    const alpha = texel.a.mul(uOpacity);
+    alpha.lessThan(float(0.02)).discard();
+    const tint = texel.rgb.mul(float(1.15));
+    return vec4(tint.mul(alpha), alpha);
+  })();
+
+  const material = new NodeMaterial();
+  material.fragmentNode = fragmentNode;
+  material.transparent = true;
+  material.depthWrite = false;
+  material.depthTest = false;
+  material.blending = NormalBlending;
+  material.premultipliedAlpha = false;
+  material.toneMapped = false;
+  material.fog = false;
+  material.side = DoubleSide;
+  material.forceSinglePass = true;
+
+  return { material, uOpacity };
+}
+
 export function createWebGPUMilkyMaterial() {
   const hash2 = fn(([p]) => {
     return fract(sin(dot(p, vec2(127.1, 311.7))).mul(43758.5453123));

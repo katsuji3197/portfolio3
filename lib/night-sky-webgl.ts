@@ -1,12 +1,16 @@
 import {
   AdditiveBlending,
   BufferGeometry,
+  CanvasTexture,
   DoubleSide,
   Euler,
   Float32BufferAttribute,
   Group,
+  LinearFilter,
   Matrix4,
   Mesh,
+  NoColorSpace,
+  NormalBlending,
   NoToneMapping,
   PerspectiveCamera,
   PlaneGeometry,
@@ -17,6 +21,13 @@ import {
   Texture,
   WebGLRenderer,
 } from 'three';
+import {
+  applyPetalPoses,
+  createCherryPetalSimulation,
+  createPetalSpriteCanvas,
+  PETAL_POOL,
+  type PetalView,
+} from '@/lib/cherry-petals';
 import { bindSkyMotion } from '@/lib/night-sky-motion';
 import {
   CAMERA_FOV,
@@ -84,6 +95,14 @@ export function mountWebGLSky(container: HTMLElement): NightSkyRuntime {
   milkyWay.group.matrixAutoUpdate = false;
   camera.add(milkyWay.group);
 
+  const petals = createWebGLPetals(camera);
+  let starCount = 0;
+  for (const layer of starLayers) {
+    const position = layer.geometry.getAttribute('position');
+    starCount += position.count;
+  }
+  renderer.domElement.dataset.starCount = String(starCount);
+
   const motion = bindSkyMotion(
     { Euler, Matrix4 },
     {
@@ -115,13 +134,19 @@ export function mountWebGLSky(container: HTMLElement): NightSkyRuntime {
   return {
     backend: 'webgl',
     resize: motion.resize,
-    renderFrame: motion.renderFrame,
+    renderFrame: (dt: number) => {
+      const poses = petals.simulation.step(dt);
+      applyPetalPoses(petals.views, poses, camera);
+      renderer.domElement.dataset.petalCount = String(poses.length);
+      motion.renderFrame(dt);
+    },
     setPointerTarget: motion.setPointerTarget,
     dispose: () => {
       for (const layer of starLayers) {
         layer.geometry.dispose();
         layer.material.dispose();
       }
+      petals.dispose();
       milkyWay.geometry.dispose();
       milkyWay.material.dispose();
       starTexture.dispose();
@@ -289,4 +314,84 @@ function createMilkyWayBand() {
   group.rotation.x = Math.PI / 6;
   group.rotation.z = -Math.PI / 6;
   return { group, geometry, material };
+}
+
+function createWebGLPetals(camera: PerspectiveCamera) {
+  const simulation = createCherryPetalSimulation();
+  const texture = new CanvasTexture(createPetalSpriteCanvas());
+  texture.colorSpace = NoColorSpace;
+  texture.magFilter = LinearFilter;
+  texture.minFilter = LinearFilter;
+  texture.generateMipmaps = false;
+  texture.needsUpdate = true;
+
+  const geometry = new PlaneGeometry(1, 1);
+  const materials: ShaderMaterial[] = [];
+  const meshes: Mesh[] = [];
+  const views: PetalView[] = [];
+
+  for (let i = 0; i < PETAL_POOL; i += 1) {
+    const material = createPetalMaterial(texture);
+    materials.push(material);
+    const mesh = new Mesh(geometry, material);
+    mesh.visible = false;
+    mesh.frustumCulled = false;
+    mesh.renderOrder = 8;
+    camera.add(mesh);
+    meshes.push(mesh);
+    views.push({
+      mesh,
+      setOpacity: opacity => {
+        material.uniforms.uOpacity.value = opacity;
+      },
+    });
+  }
+
+  return {
+    simulation,
+    views,
+    dispose: () => {
+      for (const mesh of meshes) {
+        camera.remove(mesh);
+      }
+      geometry.dispose();
+      for (const material of materials) {
+        material.dispose();
+      }
+      texture.dispose();
+    },
+  };
+}
+
+function createPetalMaterial(map: Texture) {
+  return new ShaderMaterial({
+    uniforms: {
+      map: { value: map },
+      uOpacity: { value: 0 },
+    },
+    vertexShader: `
+      varying vec2 vUv;
+      void main() {
+        vUv = uv;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: `
+      varying vec2 vUv;
+      uniform sampler2D map;
+      uniform float uOpacity;
+      void main() {
+        vec4 tex = texture2D(map, vUv);
+        float alpha = tex.a * uOpacity;
+        if (alpha < 0.02) discard;
+        gl_FragColor = vec4(tex.rgb * 1.15, alpha);
+      }
+    `,
+    transparent: true,
+    depthWrite: false,
+    depthTest: false,
+    blending: NormalBlending,
+    toneMapped: false,
+    side: DoubleSide,
+  });
 }
