@@ -136,17 +136,16 @@ export function createWebGPUStarMaterial(renderer: WebGPURenderer) {
 }
 
 /**
- * Soft petal. WebGL's straight-alpha page blend multiplies by alpha again,
- * so this writes rgb*alpha and lets SrcAlpha blending multiply once more.
+ * Additive petal. Same premultiply path as the stars so the halo matches
+ * the WebGL page blend: a hot core with a soft magenta bloom.
  */
 export function createWebGPUPetalMaterial(sprite: CanvasTexture) {
   const uOpacity = uniform(0);
   const fragmentNode = Fn(() => {
     const texel = texture(sprite, uv());
     const alpha = texel.a.mul(uOpacity);
-    alpha.lessThan(float(0.02)).discard();
-    const tint = texel.rgb.mul(float(1.15));
-    return vec4(tint.mul(alpha), alpha);
+    alpha.lessThan(float(0.015)).discard();
+    return straightAlphaAdditive(texel.rgb.mul(float(2.6)), alpha);
   })();
 
   const material = new NodeMaterial();
@@ -154,7 +153,7 @@ export function createWebGPUPetalMaterial(sprite: CanvasTexture) {
   material.transparent = true;
   material.depthWrite = false;
   material.depthTest = false;
-  material.blending = NormalBlending;
+  material.blending = AdditiveBlending;
   material.premultipliedAlpha = false;
   material.toneMapped = false;
   material.fog = false;

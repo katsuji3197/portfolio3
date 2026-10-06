@@ -33,33 +33,34 @@ describe('stepPetalSystem', () => {
     expect(elapsed).toBeGreaterThanOrEqual(5);
     expect(elapsed).toBeLessThan(5.2);
     expect(born).toHaveLength(1);
-    expect(born[0].alpha).toBeLessThan(0.1);
+    expect(born[0].alpha).toBeLessThan(0.2);
     expect(born[0].y).toBeGreaterThan(1);
+    expect(born[0].x).toBeGreaterThan(0.3);
 
     const falling = born;
-    for (let i = 0; i < 8; i += 1) {
+    for (let i = 0; i < 19; i += 1) {
       stepPetalSystem(system, 0.05);
     }
     const later = stepPetalSystem(system, 0.05);
-    expect(later[0].y).toBeLessThan(falling[0].y);
+    expect(later[0].y).toBeLessThan(falling[0].y - 0.4);
+    expect(later[0].x).toBeLessThan(falling[0].x - 0.25);
     expect(later[0].alpha).toBeGreaterThan(born[0].alpha);
   });
 
   it('keeps at most a couple of petals and removes them off-screen', () => {
     const system = createPetalSystem(zero);
-    let sawTwo = false;
     let maxAlive = 0;
     const seenY: number[] = [];
+    const seenX: number[] = [];
 
     for (let i = 0; i < 800; i += 1) {
       const poses = stepPetalSystem(system, 0.05);
       maxAlive = Math.max(maxAlive, poses.length);
-      if (poses.length === 2) {
-        sawTwo = true;
-      }
       for (const pose of poses) {
         seenY.push(pose.y);
+        seenX.push(pose.x);
         expect(pose.y).toBeGreaterThan(-1.2);
+        expect(pose.x).toBeGreaterThan(-1.3);
         expect(pose.alpha).toBeGreaterThan(0);
         expect(pose.alpha).toBeLessThanOrEqual(1);
       }
@@ -67,8 +68,8 @@ describe('stepPetalSystem', () => {
 
     expect(maxAlive).toBeLessThanOrEqual(PETAL_MAX_ALIVE);
     expect(maxAlive).toBeGreaterThanOrEqual(1);
-    expect(sawTwo).toBe(true);
     expect(Math.min(...seenY)).toBeLessThan(0);
+    expect(Math.min(...seenX)).toBeLessThan(0);
   });
 
   it('does not advance while reduced motion is on', () => {

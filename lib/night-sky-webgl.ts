@@ -10,7 +10,6 @@ import {
   Matrix4,
   Mesh,
   NoColorSpace,
-  NormalBlending,
   NoToneMapping,
   PerspectiveCamera,
   PlaneGeometry,
@@ -383,14 +382,14 @@ function createPetalMaterial(map: Texture) {
       void main() {
         vec4 tex = texture2D(map, vUv);
         float alpha = tex.a * uOpacity;
-        if (alpha < 0.02) discard;
-        gl_FragColor = vec4(tex.rgb * 1.15, alpha);
+        if (alpha < 0.015) discard;
+        gl_FragColor = vec4(tex.rgb * 2.6, alpha);
       }
     `,
     transparent: true,
     depthWrite: false,
     depthTest: false,
-    blending: NormalBlending,
+    blending: AdditiveBlending,
     toneMapped: false,
     side: DoubleSide,
   });

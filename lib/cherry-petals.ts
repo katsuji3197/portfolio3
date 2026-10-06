@@ -10,8 +10,9 @@ export const PETAL_MAX_ALIVE = 2;
 export const PETAL_DISTANCE = 210;
 export const PETAL_POOL = PETAL_MAX_ALIVE;
 
-const FADE_IN_SEC = 0.75;
+const FADE_IN_SEC = 0.45;
 const OFFSCREEN_Y = -1.18;
+const OFFSCREEN_X = -1.28;
 
 export type PetalPose = {
   x: number;
@@ -93,7 +94,7 @@ export function stepPetalSystem(system: PetalSystem, dt: number): PetalPose[] {
   for (const petal of system.petals) {
     petal.age += step;
     const pose = poseOf(petal);
-    if (pose.y < OFFSCREEN_Y) {
+    if (pose.y < OFFSCREEN_Y || pose.x < OFFSCREEN_X || pose.alpha <= 0) {
       continue;
     }
     alive.push(petal);
@@ -160,32 +161,40 @@ export function createPetalSpriteCanvas(): HTMLCanvasElement {
 
 function spawnPetal(rng: () => number): Petal {
   return {
-    x0: rng() * 1.5 - 0.75,
-    y0: 1.12,
-    fall: 0.18 + rng() * 0.08,
-    drift: (rng() - 0.5) * 0.05,
-    swayAmp: 0.03 + rng() * 0.035,
-    swayFreq: 0.65 + rng() * 0.55,
+    x0: 0.48 + rng() * 0.72,
+    y0: 1.14 + rng() * 0.18,
+    // About 3× the previous 0.18–0.26 screen-heights per second.
+    fall: (0.18 + rng() * 0.08) * 3,
+    drift: -(0.52 + rng() * 0.26),
+    swayAmp: 0.11 + rng() * 0.09,
+    swayFreq: 2.4 + rng() * 1.8,
     phase: rng() * Math.PI * 2,
     rot0: rng() * Math.PI * 2,
-    rotSpeed: (rng() - 0.5) * 0.7,
-    tumbleSpeed: 0.35 + rng() * 0.4,
+    rotSpeed: (rng() - 0.5) * 3.4,
+    tumbleSpeed: 1.3 + rng() * 1.5,
     tumblePhase: rng() * Math.PI * 2,
     age: 0,
-    scale: 22 + rng() * 8,
+    scale: 11 + rng() * 4,
   };
 }
 
 function poseOf(petal: Petal): PetalPose {
   const age = petal.age;
   const sway = Math.sin(age * petal.swayFreq + petal.phase);
-  const swaySlow = Math.sin(age * petal.swayFreq * 0.45 + petal.phase * 1.7);
-  const x = petal.x0 + petal.drift * age + sway * petal.swayAmp;
+  const gust = Math.sin(age * petal.swayFreq * 0.41 + petal.phase * 1.7);
+  const x =
+    petal.x0 +
+    petal.drift * age +
+    sway * petal.swayAmp +
+    gust * petal.swayAmp * 0.7;
   const y =
-    petal.y0 - petal.fall * age + Math.sin(age * 1.15 + petal.phase) * 0.012;
-  const tumble = Math.sin(age * petal.tumbleSpeed + petal.tumblePhase) * 0.4;
+    petal.y0 -
+    petal.fall * age +
+    Math.sin(age * petal.swayFreq * 0.72 + petal.phase) * 0.04 +
+    gust * 0.025;
+  const tumble = Math.sin(age * petal.tumbleSpeed + petal.tumblePhase) * 1.2;
   const rotation =
-    petal.rot0 + petal.rotSpeed * age + sway * 0.45 + swaySlow * 0.2;
+    petal.rot0 + petal.rotSpeed * age + sway * 1.05 + gust * 0.55;
 
   let alpha = age < FADE_IN_SEC ? age / FADE_IN_SEC : 1;
   const fadeStart = -0.72;
@@ -193,6 +202,9 @@ function poseOf(petal: Petal): PetalPose {
   if (y < fadeStart) {
     const t = (fadeStart - y) / (fadeStart - fadeEnd);
     alpha *= 1 - clamp(t, 0, 1);
+  }
+  if (x < -0.78) {
+    alpha *= 1 - clamp((-0.78 - x) / 0.42, 0, 1);
   }
 
   return {
@@ -207,44 +219,40 @@ function poseOf(petal: Petal): PetalPose {
 
 function drawCherryPetal(ctx: CanvasRenderingContext2D, size: number) {
   const c = size / 2;
-  const fill = ctx.createLinearGradient(c, c - size * 0.34, c, c + size * 0.32);
-  fill.addColorStop(0, 'rgba(255, 186, 226, 1)');
-  fill.addColorStop(0.42, 'rgba(255, 47, 154, 1)');
-  fill.addColorStop(1, 'rgba(196, 16, 112, 1)');
+  const bloom = ctx.createRadialGradient(c, c, size * 0.02, c, c, size * 0.5);
+  bloom.addColorStop(0, 'rgba(255, 250, 255, 1)');
+  bloom.addColorStop(0.16, 'rgba(255, 90, 210, 0.85)');
+  bloom.addColorStop(0.38, 'rgba(255, 24, 160, 0.42)');
+  bloom.addColorStop(0.62, 'rgba(255, 16, 145, 0.16)');
+  bloom.addColorStop(1, 'rgba(255, 0, 130, 0)');
+  ctx.fillStyle = bloom;
+  ctx.fillRect(0, 0, size, size);
 
-  ctx.save();
-  ctx.shadowColor = 'rgba(255, 40, 160, 0.95)';
-  ctx.shadowBlur = size * 0.16;
+  const fill = ctx.createLinearGradient(c, c - size * 0.34, c, c + size * 0.32);
+  fill.addColorStop(0, 'rgba(255, 255, 255, 1)');
+  fill.addColorStop(0.22, 'rgba(255, 186, 240, 1)');
+  fill.addColorStop(0.55, 'rgba(255, 36, 168, 1)');
+  fill.addColorStop(1, 'rgba(255, 8, 132, 1)');
   tracePetal(ctx, size);
   ctx.fillStyle = fill;
   ctx.fill();
-  ctx.shadowBlur = size * 0.07;
-  ctx.shadowColor = 'rgba(255, 90, 190, 0.85)';
-  ctx.fill();
-  ctx.restore();
 
   ctx.save();
   tracePetal(ctx, size);
   ctx.clip();
-  const inner = ctx.createRadialGradient(
+  const core = ctx.createRadialGradient(
     c,
-    c - size * 0.04,
-    size * 0.01,
+    c - size * 0.02,
+    0,
     c,
     c,
-    size * 0.14
+    size * 0.16
   );
-  inner.addColorStop(0, 'rgba(255, 228, 246, 0.85)');
-  inner.addColorStop(1, 'rgba(255, 228, 246, 0)');
-  ctx.fillStyle = inner;
+  core.addColorStop(0, 'rgba(255, 255, 255, 1)');
+  core.addColorStop(0.4, 'rgba(255, 236, 252, 0.98)');
+  core.addColorStop(1, 'rgba(255, 90, 205, 0)');
+  ctx.fillStyle = core;
   ctx.fillRect(0, 0, size, size);
-  ctx.beginPath();
-  ctx.moveTo(c, c + size * 0.18);
-  ctx.quadraticCurveTo(c, c + size * 0.02, c, c - size * 0.02);
-  ctx.strokeStyle = 'rgba(255, 220, 240, 0.55)';
-  ctx.lineWidth = Math.max(1, size * 0.012);
-  ctx.lineCap = 'round';
-  ctx.stroke();
   ctx.restore();
 }
 
