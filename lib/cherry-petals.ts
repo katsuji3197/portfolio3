@@ -174,7 +174,9 @@ function spawnPetal(rng: () => number): Petal {
     tumbleSpeed: 1.3 + rng() * 1.5,
     tumblePhase: rng() * Math.PI * 2,
     age: 0,
-    scale: 11 + rng() * 4,
+    // Quad is about the previous petal's size so the bloom has room.
+    // The drawn petal itself is scaled down inside the texture.
+    scale: 20 + rng() * 6,
   };
 }
 
@@ -220,19 +222,24 @@ function poseOf(petal: Petal): PetalPose {
 function drawCherryPetal(ctx: CanvasRenderingContext2D, size: number) {
   const c = size / 2;
   const bloom = ctx.createRadialGradient(c, c, size * 0.02, c, c, size * 0.5);
-  bloom.addColorStop(0, 'rgba(255, 250, 255, 1)');
-  bloom.addColorStop(0.16, 'rgba(255, 90, 210, 0.85)');
-  bloom.addColorStop(0.38, 'rgba(255, 24, 160, 0.42)');
-  bloom.addColorStop(0.62, 'rgba(255, 16, 145, 0.16)');
+  bloom.addColorStop(0, 'rgba(255, 252, 255, 1)');
+  bloom.addColorStop(0.14, 'rgba(255, 120, 220, 0.95)');
+  bloom.addColorStop(0.32, 'rgba(255, 40, 175, 0.82)');
+  bloom.addColorStop(0.55, 'rgba(255, 20, 155, 0.58)');
+  bloom.addColorStop(0.78, 'rgba(255, 12, 145, 0.28)');
   bloom.addColorStop(1, 'rgba(255, 0, 130, 0)');
   ctx.fillStyle = bloom;
   ctx.fillRect(0, 0, size, size);
 
+  ctx.save();
+  ctx.translate(c, c + size * 0.01);
+  ctx.scale(0.5, 0.5);
+  ctx.translate(-c, -c);
   const fill = ctx.createLinearGradient(c, c - size * 0.34, c, c + size * 0.32);
   fill.addColorStop(0, 'rgba(255, 255, 255, 1)');
-  fill.addColorStop(0.22, 'rgba(255, 186, 240, 1)');
-  fill.addColorStop(0.55, 'rgba(255, 36, 168, 1)');
-  fill.addColorStop(1, 'rgba(255, 8, 132, 1)');
+  fill.addColorStop(0.2, 'rgba(255, 210, 245, 1)');
+  fill.addColorStop(0.55, 'rgba(255, 48, 176, 1)');
+  fill.addColorStop(1, 'rgba(255, 12, 140, 1)');
   tracePetal(ctx, size);
   ctx.fillStyle = fill;
   ctx.fill();
@@ -246,13 +253,14 @@ function drawCherryPetal(ctx: CanvasRenderingContext2D, size: number) {
     0,
     c,
     c,
-    size * 0.16
+    size * 0.18
   );
   core.addColorStop(0, 'rgba(255, 255, 255, 1)');
-  core.addColorStop(0.4, 'rgba(255, 236, 252, 0.98)');
-  core.addColorStop(1, 'rgba(255, 90, 205, 0)');
+  core.addColorStop(0.35, 'rgba(255, 244, 252, 1)');
+  core.addColorStop(1, 'rgba(255, 120, 220, 0)');
   ctx.fillStyle = core;
   ctx.fillRect(0, 0, size, size);
+  ctx.restore();
   ctx.restore();
 }
 
