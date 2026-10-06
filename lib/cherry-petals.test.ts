@@ -33,18 +33,64 @@ describe('stepPetalSystem', () => {
     expect(elapsed).toBeGreaterThanOrEqual(5);
     expect(elapsed).toBeLessThan(5.2);
     expect(born).toHaveLength(1);
-    expect(born[0].alpha).toBeLessThan(0.2);
-    expect(born[0].y).toBeGreaterThan(1);
-    expect(born[0].x).toBeGreaterThan(0.3);
+    expect(born[0].alpha).toBeLessThan(0.25);
+    expect(born[0].y).toBeGreaterThan(0.6);
+    expect(born[0].x).toBeGreaterThan(-0.4);
+    expect(born[0].x).toBeLessThan(1.4);
+    expect(born[0].depth).toBeGreaterThan(0.5);
+    expect(born[0].depth).toBeLessThan(1.7);
+    expect(born[0].scale).toBeGreaterThanOrEqual(10);
+    expect(born[0].scale).toBeLessThanOrEqual(13);
 
     const falling = born;
-    for (let i = 0; i < 19; i += 1) {
+    for (let i = 0; i < 39; i += 1) {
       stepPetalSystem(system, 0.05);
     }
     const later = stepPetalSystem(system, 0.05);
     expect(later[0].y).toBeLessThan(falling[0].y - 0.4);
-    expect(later[0].x).toBeLessThan(falling[0].x - 0.25);
+    expect(later[0].x).toBeLessThan(falling[0].x - 0.3);
     expect(later[0].alpha).toBeGreaterThan(born[0].alpha);
+  });
+
+  it('sends each petal along a different arc and depth', () => {
+    const system = createPetalSystem(mulberry32(3));
+    const births: PetalPose[] = [];
+    const solos: PetalPose[][] = [];
+    let prevCount = 0;
+    let solo: PetalPose[] | null = null;
+
+    for (let i = 0; i < 900; i += 1) {
+      const poses = stepPetalSystem(system, 0.05);
+      if (poses.length > prevCount) {
+        births.push(poses.reduce((a, b) => (a.alpha < b.alpha ? a : b)));
+      }
+      prevCount = poses.length;
+      if (poses.length === 1) {
+        if (!solo) {
+          solo = [];
+          solos.push(solo);
+        }
+        solo.push(poses[0]);
+      } else {
+        solo = null;
+      }
+    }
+
+    expect(births.length).toBeGreaterThanOrEqual(3);
+    expect(spread(births.map(pose => pose.x))).toBeGreaterThan(0.45);
+    expect(spread(births.map(pose => pose.depth))).toBeGreaterThan(0.3);
+    expect(spread(births.map(pose => pose.scale))).toBeGreaterThan(1);
+    expect(spread(births.map(pose => pose.y))).toBeGreaterThan(0.2);
+
+    const depthTravel = solos
+      .filter(track => track.length > 30)
+      .map(track => Math.abs(track[30].depth - track[0].depth));
+    expect(Math.max(...depthTravel)).toBeGreaterThan(0.04);
+
+    const drift = solos
+      .filter(track => track.length > 40)
+      .map(track => track[40].x - track[0].x);
+    expect(spread(drift)).toBeGreaterThan(0.12);
   });
 
   it('keeps at most a couple of petals and removes them off-screen', () => {
@@ -95,21 +141,37 @@ describe('applyPetalPoses', () => {
     const pose: PetalPose = {
       x: 0,
       y: 0,
+      depth: 1,
       rotation: 0.4,
       tumble: -0.2,
+      pitch: 0.3,
       alpha: 0.8,
-      scale: 20,
+      scale: 12,
     };
     applyPetalPoses(views, [pose], { fov: 70, aspect: 1 });
 
     expect(views[0].mesh.visible).toBe(true);
     expect(views[0].mesh.position).toMatchObject({ x: 0, y: 0, z: -210 });
-    expect(views[0].mesh.rotation).toEqual({ y: -0.2, z: 0.4 });
+    expect(views[0].mesh.rotation).toEqual({ x: 0.3, y: -0.2, z: 0.4 });
     expect(views[0].opacity).toBe(0.8);
     expect(views[1].mesh.visible).toBe(false);
     expect(views[1].opacity).toBe(0);
   });
 });
+
+function spread(values: number[]) {
+  return Math.max(...values) - Math.min(...values);
+}
+
+function mulberry32(seed: number) {
+  let state = seed >>> 0;
+  return () => {
+    state = (state + 0x6d2b79f5) | 0;
+    let t = Math.imul(state ^ (state >>> 15), 1 | state);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
 
 function stepUntil(step: (dt: number) => PetalPose[], seconds: number) {
   let left = seconds;
@@ -131,7 +193,7 @@ function fakeView(): PetalView & { opacity: number } {
       this.z = z;
     },
   };
-  const rotation = { y: 0, z: 0 };
+  const rotation = { x: 0, y: 0, z: 0 };
   const view: PetalView & { opacity: number } = {
     opacity: 1,
     mesh: {

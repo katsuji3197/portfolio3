@@ -13,12 +13,18 @@ export const PETAL_POOL = PETAL_MAX_ALIVE;
 const FADE_IN_SEC = 0.45;
 const OFFSCREEN_Y = -1.18;
 const OFFSCREEN_X = -1.28;
+const OFFSCREEN_X_RIGHT = 1.48;
+const DEPTH_NEAR = 0.55;
+const DEPTH_FAR = 1.65;
 
 export type PetalPose = {
   x: number;
   y: number;
+  /** 1 is the reference distance. Smaller is nearer (larger, brighter). */
+  depth: number;
   rotation: number;
   tumble: number;
+  pitch: number;
   alpha: number;
   scale: number;
 };
@@ -26,15 +32,26 @@ export type PetalPose = {
 type Petal = {
   x0: number;
   y0: number;
+  depth0: number;
+  zDrift: number;
+  zAmp: number;
+  zFreq: number;
+  zPhase: number;
   fall: number;
   drift: number;
   swayAmp: number;
   swayFreq: number;
   phase: number;
+  arcAmp: number;
+  arcFreq: number;
+  arcPhase: number;
+  yBob: number;
   rot0: number;
   rotSpeed: number;
   tumbleSpeed: number;
   tumblePhase: number;
+  pitchAmp: number;
+  yawAmp: number;
   age: number;
   scale: number;
 };
@@ -49,7 +66,7 @@ export type PetalView = {
   mesh: {
     visible: boolean;
     position: { set: (x: number, y: number, z: number) => void };
-    rotation: { y: number; z: number };
+    rotation: { x: number; y: number; z: number };
     scale: { set: (x: number, y: number, z: number) => void };
   };
   setOpacity: (opacity: number) => void;
@@ -94,7 +111,12 @@ export function stepPetalSystem(system: PetalSystem, dt: number): PetalPose[] {
   for (const petal of system.petals) {
     petal.age += step;
     const pose = poseOf(petal);
-    if (pose.y < OFFSCREEN_Y || pose.x < OFFSCREEN_X || pose.alpha <= 0) {
+    if (
+      pose.y < OFFSCREEN_Y ||
+      pose.x < OFFSCREEN_X ||
+      pose.x > OFFSCREEN_X_RIGHT ||
+      pose.alpha <= 0
+    ) {
       continue;
     }
     alive.push(petal);
@@ -138,9 +160,15 @@ export function applyPetalPoses(
       continue;
     }
     view.mesh.visible = true;
-    view.mesh.position.set(pose.x * halfW, pose.y * halfH, -PETAL_DISTANCE);
+    const depth = pose.depth;
+    view.mesh.position.set(
+      pose.x * halfW * depth,
+      pose.y * halfH * depth,
+      -PETAL_DISTANCE * depth
+    );
     view.mesh.rotation.z = pose.rotation;
     view.mesh.rotation.y = pose.tumble;
+    view.mesh.rotation.x = pose.pitch;
     view.mesh.scale.set(pose.scale, pose.scale * 1.12, 1);
     view.setOpacity(pose.alpha);
   }
@@ -160,45 +188,68 @@ export function createPetalSpriteCanvas(): HTMLCanvasElement {
 }
 
 function spawnPetal(rng: () => number): Petal {
+  const tumbleAmp = 0.4 + rng() * 0.85;
+  const tumbleAxis = rng() * Math.PI * 2;
   return {
-    x0: 0.48 + rng() * 0.72,
-    y0: 1.14 + rng() * 0.18,
-    // About 3× the previous 0.18–0.26 screen-heights per second.
-    fall: (0.18 + rng() * 0.08) * 3,
-    drift: -(0.52 + rng() * 0.26),
-    swayAmp: 0.11 + rng() * 0.09,
-    swayFreq: 2.4 + rng() * 1.8,
+    x0: -0.2 + rng() * 1.4,
+    y0: 0.7 + rng() * 0.62,
+    depth0: 0.64 + rng() * 0.78,
+    zDrift: (rng() - 0.5) * 0.1,
+    zAmp: 0.06 + rng() * 0.16,
+    zFreq: 0.32 + rng() * 0.6,
+    zPhase: rng() * Math.PI * 2,
+    // Half of the previous 3× fall (0.54–0.78) and wind (−0.52 to −0.78).
+    fall: (0.18 + rng() * 0.08) * 1.5,
+    drift: -(0.26 + rng() * 0.13),
+    swayAmp: 0.03 + rng() * 0.18,
+    swayFreq: 0.7 + rng() * 2.1,
     phase: rng() * Math.PI * 2,
+    arcAmp: 0.04 + rng() * 0.34,
+    arcFreq: 0.22 + rng() * 0.55,
+    arcPhase: rng() * Math.PI * 2,
+    yBob: 0.02 + rng() * 0.09,
     rot0: rng() * Math.PI * 2,
-    rotSpeed: (rng() - 0.5) * 3.4,
-    tumbleSpeed: 1.3 + rng() * 1.5,
+    rotSpeed: (rng() - 0.5) * 2.4,
+    tumbleSpeed: 0.7 + rng() * 1.5,
     tumblePhase: rng() * Math.PI * 2,
+    pitchAmp: Math.cos(tumbleAxis) * tumbleAmp,
+    yawAmp: Math.sin(tumbleAxis) * tumbleAmp,
     age: 0,
-    // Quad is about the previous petal's size so the bloom has room.
-    // The drawn petal itself is scaled down inside the texture.
-    scale: 20 + rng() * 6,
+    // Half of the previous 20–26 quad. Glow texture is unchanged.
+    scale: 10 + rng() * 3,
   };
 }
 
 function poseOf(petal: Petal): PetalPose {
   const age = petal.age;
   const sway = Math.sin(age * petal.swayFreq + petal.phase);
-  const gust = Math.sin(age * petal.swayFreq * 0.41 + petal.phase * 1.7);
+  const gust = Math.sin(age * petal.swayFreq * 0.47 + petal.phase * 1.7);
+  const arc = Math.sin(age * petal.arcFreq + petal.arcPhase) * petal.arcAmp;
   const x =
     petal.x0 +
     petal.drift * age +
     sway * petal.swayAmp +
-    gust * petal.swayAmp * 0.7;
+    gust * petal.swayAmp * 0.65 +
+    arc;
   const y =
     petal.y0 -
     petal.fall * age +
-    Math.sin(age * petal.swayFreq * 0.72 + petal.phase) * 0.04 +
-    gust * 0.025;
-  const tumble = Math.sin(age * petal.tumbleSpeed + petal.tumblePhase) * 1.2;
-  const rotation =
-    petal.rot0 + petal.rotSpeed * age + sway * 1.05 + gust * 0.55;
+    Math.sin(age * petal.swayFreq * 0.63 + petal.phase) * petal.yBob +
+    gust * petal.yBob * 0.45;
+  const depth = clamp(
+    petal.depth0 +
+      petal.zDrift * age +
+      Math.sin(age * petal.zFreq + petal.zPhase) * petal.zAmp,
+    DEPTH_NEAR,
+    DEPTH_FAR
+  );
+  const tumbleWave = Math.sin(age * petal.tumbleSpeed + petal.tumblePhase);
+  const tumble = tumbleWave * petal.yawAmp;
+  const pitch = tumbleWave * petal.pitchAmp;
+  const rotation = petal.rot0 + petal.rotSpeed * age + sway * 0.9 + gust * 0.4;
 
   let alpha = age < FADE_IN_SEC ? age / FADE_IN_SEC : 1;
+  alpha *= clamp(1.55 - depth * 0.7, 0.38, 1);
   const fadeStart = -0.72;
   const fadeEnd = OFFSCREEN_Y;
   if (y < fadeStart) {
@@ -212,8 +263,10 @@ function poseOf(petal: Petal): PetalPose {
   return {
     x,
     y,
+    depth,
     rotation,
     tumble,
+    pitch,
     alpha: clamp(alpha, 0, 1),
     scale: petal.scale,
   };
