@@ -5,6 +5,7 @@ import { getProjectBySlug } from '@/lib/microcms';
 import { LOCAL_PROJECT_CONTENT } from '@/data/projects';
 import { formatYearMonth } from '@/lib/date-utils';
 import { htmlContainsMermaidBlock } from '@/lib/mermaid-blocks';
+import { enhanceProjectBodyHtml } from '@/lib/project-content-html';
 import ProjectHtmlContent from '@/components/project-html-content';
 import { ArrowTopRightOnSquareIcon } from '@heroicons/react/24/outline';
 
@@ -16,8 +17,11 @@ export default async function ProjectDetailPage({ params }: PageProps) {
   if (!project) return notFound();
 
   const hasLocalContent = !!LOCAL_PROJECT_CONTENT[project.id];
-  const hasApiContent =
-    typeof project.content === 'string' && project.content.trim() !== '';
+  const contentHtml =
+    typeof project.content === 'string'
+      ? enhanceProjectBodyHtml(project.content)
+      : '';
+  const hasApiContent = contentHtml.trim() !== '';
   const hasDetailContent = hasLocalContent || hasApiContent;
 
   return (
@@ -76,12 +80,12 @@ export default async function ProjectDetailPage({ params }: PageProps) {
             {LOCAL_PROJECT_CONTENT[project.id]}
           </div>
         ) : hasApiContent ? (
-          htmlContainsMermaidBlock(project.content as string) ? (
-            <ProjectHtmlContent html={project.content as string} />
+          htmlContainsMermaidBlock(contentHtml) ? (
+            <ProjectHtmlContent html={contentHtml} />
           ) : (
             <div
               className="prose-custom"
-              dangerouslySetInnerHTML={{ __html: project.content as string }}
+              dangerouslySetInnerHTML={{ __html: contentHtml }}
             />
           )
         ) : (
