@@ -1,15 +1,25 @@
 import {
   BufferGeometry,
+  CanvasTexture,
   Euler,
   Float32BufferAttribute,
   Group,
+  LinearFilter,
   Matrix4,
   Mesh,
+  NoColorSpace,
   PerspectiveCamera,
   PlaneGeometry,
   Scene,
   WebGPURenderer,
 } from 'three/webgpu';
+import {
+  applyPetalPoses,
+  createCherryPetalSimulation,
+  createPetalSpriteCanvas,
+  PETAL_POOL,
+  type PetalView,
+} from '@/lib/cherry-petals';
 import { rendererBackendKind } from '@/lib/gpu-renderer';
 import { bindSkyMotion } from '@/lib/night-sky-motion';
 import {
@@ -17,7 +27,7 @@ import {
   CAMERA_Z,
   fillStarAttributes,
   randomViewportPosition,
-  STAR_LAYERS,
+  starLayersForBackend,
 } from '@/lib/night-sky-data';
 import {
   markRendererBackend,
@@ -26,6 +36,7 @@ import {
 import { expandPointQuads } from '@/lib/point-quads';
 import {
   createWebGPUMilkyMaterial,
+  createWebGPUPetalMaterial,
   createWebGPUStarMaterial,
 } from '@/lib/webgpu-sky-materials';
 
@@ -64,8 +75,11 @@ export async function mountWebGPUSky(
 
   const geometries: BufferGeometry[] = [];
   const starLayers: { group: Group; parallax: number }[] = [];
+  const layerConfigs = starLayersForBackend(backend);
+  let starCount = 0;
 
-  for (const config of STAR_LAYERS) {
+  for (const config of layerConfigs) {
+    starCount += config.count;
     const attrs = fillStarAttributes(
       config.count,
       () => randomViewportPosition(config.planeZ, config.thickness),
@@ -109,6 +123,7 @@ export async function mountWebGPUSky(
     geometries.push(geometry);
     starLayers.push({ group, parallax: config.parallax });
   }
+  renderer.domElement.dataset.starCount = String(starCount);
 
   const milkyMaterial = createWebGPUMilkyMaterial();
   const milkyGeometry = new PlaneGeometry(3200, 780, 1, 1);
@@ -120,6 +135,8 @@ export async function mountWebGPUSky(
   milkyGroup.matrixAutoUpdate = false;
   milkyGroup.frustumCulled = false;
   camera.add(milkyGroup);
+
+  const petals = createWebGPUPetals(camera);
 
   const motion = bindSkyMotion(
     { Euler, Matrix4 },
@@ -155,12 +172,18 @@ export async function mountWebGPUSky(
   return {
     backend,
     resize: motion.resize,
-    renderFrame: motion.renderFrame,
+    renderFrame: (dt: number) => {
+      const poses = petals.simulation.step(dt);
+      applyPetalPoses(petals.views, poses, camera);
+      renderer.domElement.dataset.petalCount = String(poses.length);
+      motion.renderFrame(dt);
+    },
     setPointerTarget: motion.setPointerTarget,
     dispose: () => {
       for (const geometry of geometries) {
         geometry.dispose();
       }
+      petals.dispose();
       stars.material.dispose();
       stars.sprite.dispose();
       milkyGeometry.dispose();
@@ -169,6 +192,53 @@ export async function mountWebGPUSky(
       if (container.contains(renderer.domElement)) {
         container.removeChild(renderer.domElement);
       }
+    },
+  };
+}
+
+function createWebGPUPetals(camera: PerspectiveCamera) {
+  const simulation = createCherryPetalSimulation();
+  const sprite = new CanvasTexture(createPetalSpriteCanvas());
+  sprite.colorSpace = NoColorSpace;
+  sprite.magFilter = LinearFilter;
+  sprite.minFilter = LinearFilter;
+  sprite.generateMipmaps = false;
+  sprite.needsUpdate = true;
+
+  const geometry = new PlaneGeometry(1, 1);
+  const materials: { dispose: () => void }[] = [];
+  const meshes: Mesh[] = [];
+  const views: PetalView[] = [];
+
+  for (let i = 0; i < PETAL_POOL; i += 1) {
+    const petal = createWebGPUPetalMaterial(sprite);
+    materials.push(petal.material);
+    const mesh = new Mesh(geometry, petal.material);
+    mesh.visible = false;
+    mesh.frustumCulled = false;
+    mesh.renderOrder = 8;
+    camera.add(mesh);
+    meshes.push(mesh);
+    views.push({
+      mesh,
+      setOpacity: opacity => {
+        petal.uOpacity.value = opacity;
+      },
+    });
+  }
+
+  return {
+    simulation,
+    views,
+    dispose: () => {
+      for (const mesh of meshes) {
+        camera.remove(mesh);
+      }
+      geometry.dispose();
+      for (const material of materials) {
+        material.dispose();
+      }
+      sprite.dispose();
     },
   };
 }

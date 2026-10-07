@@ -135,6 +135,34 @@ export function createWebGPUStarMaterial(renderer: WebGPURenderer) {
   return { material, sprite, uTime, uPixelRatio };
 }
 
+/**
+ * Additive petal. Same premultiply path as the stars so the halo matches
+ * the WebGL page blend: a hot core with a soft magenta bloom.
+ */
+export function createWebGPUPetalMaterial(sprite: CanvasTexture) {
+  const uOpacity = uniform(0);
+  const fragmentNode = Fn(() => {
+    const texel = texture(sprite, uv());
+    const alpha = texel.a.mul(uOpacity);
+    alpha.lessThan(float(0.015)).discard();
+    return straightAlphaAdditive(texel.rgb.mul(float(2.6)), alpha);
+  })();
+
+  const material = new NodeMaterial();
+  material.fragmentNode = fragmentNode;
+  material.transparent = true;
+  material.depthWrite = false;
+  material.depthTest = false;
+  material.blending = AdditiveBlending;
+  material.premultipliedAlpha = false;
+  material.toneMapped = false;
+  material.fog = false;
+  material.side = DoubleSide;
+  material.forceSinglePass = true;
+
+  return { material, uOpacity };
+}
+
 export function createWebGPUMilkyMaterial() {
   const hash2 = fn(([p]) => {
     return fract(sin(dot(p, vec2(127.1, 311.7))).mul(43758.5453123));

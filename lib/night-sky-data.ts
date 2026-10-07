@@ -72,6 +72,25 @@ export const STAR_LAYERS: StarLayerConfig[] = [
 ];
 
 /**
+ * WebGPU can carry more screen quads, so each layer grows by this factor.
+ * Sizes and the spectral-class colors stay on the same ranges; only the
+ * count changes. WebGL, including a lost-device fallback, keeps STAR_LAYERS.
+ */
+export const WEBGPU_STAR_COUNT_SCALE = 1.5;
+
+export function starLayersForBackend(
+  backend: 'webgpu' | 'webgl'
+): readonly StarLayerConfig[] {
+  if (backend !== 'webgpu') {
+    return STAR_LAYERS;
+  }
+  return STAR_LAYERS.map(layer => ({
+    ...layer,
+    count: Math.round(layer.count * WEBGPU_STAR_COUNT_SCALE),
+  }));
+}
+
+/**
  * Naked-eye spectral-class counts from the Yale Bright Star Catalogue,
  * 5th Revised Ed. (Hoffleit & Warren 1991; CDS VizieR V/50). The
  * catalogue lists 9110 entries complete to about V = 6.5. Class totals
