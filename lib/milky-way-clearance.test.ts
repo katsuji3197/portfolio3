@@ -3,6 +3,8 @@ import { Euler, Matrix4, PerspectiveCamera, Vector3 } from 'three';
 import { MILKY_CLEARANCE_TABLES } from './milky-way-clearance-table';
 import {
   buildMilkyClearanceTable,
+  MILKY_DEPTH_FADE_SECONDS,
+  milkyDepthFade,
   placeClearedStar,
   wrapClearedStar,
   type ClearedStar,
@@ -161,6 +163,86 @@ describe('milky way clearance', () => {
         4
       );
     }
+  });
+
+  it('eases opacity across the band over the fade interval', () => {
+    const half = 1000;
+    const gapLo = -100;
+    const gapHi = 100;
+    const z = -280;
+    const width = Math.abs(z) * STAR_DRIFT_RATE * MILKY_DEPTH_FADE_SECONDS;
+    const near: ClearedStar = {
+      x: gapHi + width,
+      y: 0,
+      z,
+      parallax: 4,
+      mode: 1,
+      gapLo,
+      gapHi,
+      half,
+      sizeScale: 1,
+    };
+    expect(MILKY_DEPTH_FADE_SECONDS).toBeGreaterThanOrEqual(0.5);
+    expect(MILKY_DEPTH_FADE_SECONDS).toBeLessThanOrEqual(1.5);
+    expect(milkyDepthFade(near, wrapClearedStar(near, 0))).toBeCloseTo(1, 5);
+    expect(
+      milkyDepthFade(near, wrapClearedStar(near, MILKY_DEPTH_FADE_SECONDS / 2))
+    ).toBeCloseTo(0.5, 5);
+    expect(
+      milkyDepthFade(near, wrapClearedStar(near, MILKY_DEPTH_FADE_SECONDS))
+    ).toBeCloseTo(0, 5);
+    const closed: ClearedStar = {
+      ...near,
+      gapLo: -half,
+      gapHi: -half,
+    };
+    expect(milkyDepthFade(closed, wrapClearedStar(closed, 30))).toBe(1);
+
+    const behindZ = -1400;
+    const behindWidth =
+      Math.abs(behindZ) * STAR_DRIFT_RATE * MILKY_DEPTH_FADE_SECONDS;
+    const behind: ClearedStar = {
+      x: -500,
+      y: 0,
+      z: behindZ,
+      parallax: 4,
+      mode: 0,
+      gapLo: -500,
+      gapHi: 500,
+      half: 0,
+      sizeScale: 2,
+    };
+    expect(milkyDepthFade(behind, behind.gapLo)).toBeCloseTo(0, 5);
+    expect(milkyDepthFade(behind, 0)).toBeCloseTo(1, 5);
+    expect(
+      milkyDepthFade(behind, behind.gapLo + behindWidth * 0.5)
+    ).toBeCloseTo(0.5, 5);
+    expect(
+      milkyDepthFade(behind, wrapClearedStar(behind, MILKY_DEPTH_FADE_SECONDS))
+    ).toBeCloseTo(1, 5);
+  });
+
+  it('leaves stars off the band opaque and only dims the edge', () => {
+    const rand = mulberry32(3);
+    let closed = 0;
+    let dimmed = 0;
+    for (const layer of STAR_LAYERS) {
+      for (let i = 0; i < layer.count; i += 1) {
+        const star = placeClearedStar(layer, rand);
+        const fade = milkyDepthFade(star, wrapClearedStar(star, 120));
+        expect(fade).toBeGreaterThanOrEqual(0);
+        expect(fade).toBeLessThanOrEqual(1);
+        if (star.gapHi - star.gapLo <= 0.01) {
+          expect(fade).toBe(1);
+          closed += 1;
+        } else if (fade < 0.999) {
+          dimmed += 1;
+        }
+      }
+    }
+    expect(closed).toBeGreaterThan(0);
+    expect(dimmed).toBeGreaterThan(0);
+    expect(dimmed).toBeLessThan(400);
   });
 
   it('places every WebGL star behind the frozen quad along its drift', () => {

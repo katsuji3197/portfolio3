@@ -37,7 +37,10 @@ import {
   STAR_LAYERS,
   type StarLayerConfig,
 } from '@/lib/night-sky-data';
-import { fillClearedStarAttributes } from '@/lib/milky-way-clearance';
+import {
+  fillClearedStarAttributes,
+  MILKY_DEPTH_FADE_SECONDS,
+} from '@/lib/milky-way-clearance';
 import {
   markRendererBackend,
   type NightSkyRuntime,
@@ -185,11 +188,11 @@ function createStarMaterial(map: Texture) {
         // Same drift as wrapClearedStar. mode >= 0.5 skips the Milky Way
         // gap; otherwise X wraps inside the behind-the-band interval.
         float drift = position.z * ${STAR_DRIFT_RATE} * uTime;
+        float gapLo = aWrap.y;
+        float gapHi = aWrap.z;
         float wrappedX;
         if (aWrap.x >= 0.5) {
           float halfW = aWrap.w;
-          float gapLo = aWrap.y;
-          float gapHi = aWrap.z;
           float right = halfW - gapHi;
           float safeSpan = max(halfW * 2.0 - (gapHi - gapLo), 0.001);
           float s0 = position.x >= gapHi
@@ -199,12 +202,29 @@ function createStarMaterial(map: Texture) {
           s = s - safeSpan * floor(s / safeSpan);
           wrappedX = s <= right ? gapHi + s : -halfW + (s - right);
         } else {
-          float lo = aWrap.y;
-          float hi = aWrap.z;
-          float span = max(hi - lo, 0.001);
+          float span = max(gapHi - gapLo, 0.001);
           float shifted = position.x + drift;
-          wrappedX = lo + (shifted - lo) - span * floor((shifted - lo) / span);
+          wrappedX = gapLo + (shifted - gapLo) - span * floor((shifted - gapLo) / span);
         }
+        // Same curve as milkyDepthFade: out as a near star meets the band,
+        // in again on the far side and for the copy placed behind the mesh.
+        float gap = gapHi - gapLo;
+        float fade = 1.0;
+        if (gap > 0.01) {
+          float width = max(abs(position.z) * ${STAR_DRIFT_RATE * MILKY_DEPTH_FADE_SECONDS}, 0.001);
+          float dist;
+          float reach = width;
+          if (aWrap.x >= 0.5) {
+            if (wrappedX >= gapHi) dist = wrappedX - gapHi;
+            else if (wrappedX <= gapLo) dist = gapLo - wrappedX;
+            else dist = 0.0;
+          } else {
+            dist = max(0.0, min(wrappedX - gapLo, gapHi - wrappedX));
+            reach = min(width, max(gap * 0.5, 0.001));
+          }
+          fade = smoothstep(0.0, reach, dist);
+        }
+        vAlpha *= fade;
         vec3 drifted = vec3(wrappedX, position.y, position.z);
         vec4 mvPosition = modelViewMatrix * vec4(drifted, 1.0);
         gl_PointSize = max(

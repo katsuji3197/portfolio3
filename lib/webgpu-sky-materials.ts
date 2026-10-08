@@ -25,6 +25,7 @@ import {
   fract,
   Fn,
   max,
+  min,
   mix,
   modelViewMatrix,
   select,
@@ -34,11 +35,13 @@ import {
   uint,
   uniform,
   uv,
+  varyingProperty,
   vec2,
   vec3,
   vec4,
   viewport,
 } from 'three/tsl';
+import { MILKY_DEPTH_FADE_SECONDS } from '@/lib/milky-way-clearance';
 import {
   createStarSpriteCanvas,
   MILKY_WAY_HOLD_SECONDS,
@@ -93,6 +96,7 @@ export function createWebGPUStarMaterial(renderer: WebGPURenderer) {
   const aColor = attribute('aColor', 'vec3');
   const aSize = attribute('aSize', 'float');
   const aTwinkle = attribute('aTwinkle', 'vec3');
+  const vMilkyFade = varyingProperty('float', 'vMilkyFade');
 
   const vertexNode = Fn(() => {
     // Same drift as wrapClearedStar / the WebGL star shader.
@@ -126,6 +130,37 @@ export function createWebGPUStarMaterial(renderer: WebGPURenderer) {
       gappedX,
       linearX
     );
+    // Same curve as milkyDepthFade. A closed gap stays fully opaque.
+    const gap = gapHi.sub(gapLo);
+    const width = max(
+      abs(aCenter.z).mul(float(STAR_DRIFT_RATE * MILKY_DEPTH_FADE_SECONDS)),
+      float(0.001)
+    );
+    const outsideDist = select(
+      wrappedX.greaterThanEqual(gapHi),
+      wrappedX.sub(gapHi),
+      select(wrappedX.lessThanEqual(gapLo), gapLo.sub(wrappedX), float(0))
+    );
+    const insideDist = max(
+      float(0),
+      min(wrappedX.sub(gapLo), gapHi.sub(wrappedX))
+    );
+    const dist = select(
+      aWrap.x.greaterThanEqual(float(0.5)),
+      outsideDist,
+      insideDist
+    );
+    const reach = select(
+      aWrap.x.greaterThanEqual(float(0.5)),
+      width,
+      min(width, max(gap.mul(float(0.5)), float(0.001)))
+    );
+    const fade = select(
+      gap.lessThanEqual(float(0.01)),
+      float(1),
+      smoothstep(float(0), reach, dist)
+    );
+    vMilkyFade.assign(fade);
     const drifted = vec3(wrappedX, aCenter.y, aCenter.z);
     const center = modelViewMatrix.mul(vec4(drifted, i1()));
     const depth = max(center.z.negate(), float(0.001));
@@ -148,7 +183,7 @@ export function createWebGPUStarMaterial(renderer: WebGPURenderer) {
     );
     const vAlpha = clamp(twinkle, float(0.45), float(1.25));
     const texel = texture(sprite, aCorner.add(float(0.5)));
-    const alpha = texel.a.mul(vAlpha);
+    const alpha = texel.a.mul(vAlpha).mul(vMilkyFade);
     alpha.lessThan(float(0.02)).discard();
     const straight = aColor.mul(texel.rgb).mul(float(2));
     return straightAlphaAdditive(straight, alpha);

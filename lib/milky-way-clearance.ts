@@ -22,6 +22,11 @@ import {
  * original box. Stars that would cross it are moved back along the view ray
  * until the whole drift interval sits behind the quad, and aSize is scaled
  * by the same ratio so the on-screen point size stays put.
+ *
+ * The handoff at that boundary is a fade, not a cut. A star at the original
+ * depth eases out over MILKY_DEPTH_FADE_SECONDS as it reaches the gap, and
+ * the star placed behind the mesh eases in over the same travel time. Rows
+ * with no gap stay fully opaque.
  */
 const QUAD_HALF_X = 1600;
 const QUAD_HALF_Y = 390;
@@ -624,6 +629,35 @@ export function placeClearedStar(
     half: 0,
     sizeScale: k,
   };
+}
+
+/**
+ * How long a star takes to ease between fully hidden at the band edge and
+ * fully opaque one fade-width farther away. Width is |z| * drift rate, so
+ * the clock time stays the same at every depth.
+ */
+export const MILKY_DEPTH_FADE_SECONDS = 1.1;
+
+/** Opacity for a wrapped X. 1 away from the band, 0 on the edge. */
+export function milkyDepthFade(star: ClearedStar, wrappedX: number) {
+  const gap = star.gapHi - star.gapLo;
+  if (gap <= 0.01) return 1;
+  const width = Math.max(
+    Math.abs(star.z) * STAR_DRIFT_RATE * MILKY_DEPTH_FADE_SECONDS,
+    1e-3
+  );
+  let dist: number;
+  let reach = width;
+  if (star.mode >= 0.5) {
+    if (wrappedX >= star.gapHi) dist = wrappedX - star.gapHi;
+    else if (wrappedX <= star.gapLo) dist = star.gapLo - wrappedX;
+    else dist = 0;
+  } else {
+    dist = Math.max(0, Math.min(wrappedX - star.gapLo, star.gapHi - wrappedX));
+    reach = Math.min(width, Math.max(gap * 0.5, 1e-3));
+  }
+  const t = Math.min(1, Math.max(0, dist / reach));
+  return t * t * (3 - 2 * t);
 }
 
 /** X after drift. Matches the star vertex shaders on both backends. */
