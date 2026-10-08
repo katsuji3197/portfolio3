@@ -35,7 +35,9 @@ import {
   fillStarAttributes,
   MILKY_WAY_HOLD_SECONDS,
   randomViewportPosition,
+  STAR_DRIFT_RATE,
   STAR_LAYERS,
+  starLayerHalfExtents,
   type StarLayerConfig,
 } from '@/lib/night-sky-data';
 import {
@@ -157,10 +159,11 @@ export function mountWebGLSky(container: HTMLElement): NightSkyRuntime {
   };
 }
 
-function createStarMaterial(map: Texture) {
+function createStarMaterial(map: Texture, halfWidth: number) {
   return new ShaderMaterial({
     uniforms: {
       uTime: { value: 0 },
+      uHalfWidth: { value: halfWidth },
       uPixelRatio: {
         value: capDevicePixelRatio(
           typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1
@@ -175,13 +178,18 @@ function createStarMaterial(map: Texture) {
       varying vec3 vColor;
       varying float vAlpha;
       uniform float uTime;
+      uniform float uHalfWidth;
       uniform float uPixelRatio;
 
       void main() {
         vColor = aColor;
         float twinkle = 0.82 + aTwinkle.z * sin(uTime * aTwinkle.y + aTwinkle.x);
         vAlpha = clamp(twinkle, 0.45, 1.25);
-        vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+        float span = uHalfWidth * 2.0;
+        float shifted = position.x + position.z * ${STAR_DRIFT_RATE} * uTime;
+        float wrappedX = mod(shifted + uHalfWidth, span) - uHalfWidth;
+        vec3 drifted = vec3(wrappedX, position.y, position.z);
+        vec4 mvPosition = modelViewMatrix * vec4(drifted, 1.0);
         gl_PointSize = max(
           aSize * uPixelRatio * (300.0 / max(-mvPosition.z, 80.0)),
           0.9 * uPixelRatio
@@ -232,7 +240,8 @@ function createViewportStarLayer(map: Texture, config: StarLayerConfig) {
     new Float32BufferAttribute(attrs.twinkles, 3)
   );
 
-  const material = createStarMaterial(map);
+  const { halfWidth } = starLayerHalfExtents(config.planeZ);
+  const material = createStarMaterial(map, halfWidth);
   const points = new Points(geometry, material);
   const group = new Group();
   group.add(points);

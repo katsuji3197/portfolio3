@@ -10,6 +10,7 @@ import {
   CAMERA_Z,
   MILKY_WAY_HOLD_SECONDS,
   SKY_MOTION,
+  STAR_DRIFT_RATE,
 } from '@/lib/night-sky-data';
 import { capDevicePixelRatio } from '@/lib/webgl-playback';
 
@@ -94,7 +95,10 @@ export function bindSkyMotion(
     pointerX += (pointerTargetX - pointerX) * follow;
     pointerY += (pointerTargetY - pointerY) * follow;
 
-    root.rotation.y = elapsed * 0.008 + pointerX * SKY_MOTION.yawRange;
+    // Time no longer yaws the whole star box out of the frustum. Stars drift
+    // inside that box in the star shader (wrapDriftedX / STAR_DRIFT_RATE).
+    // Pointer yaw stays a small rigid tilt, same range as before.
+    root.rotation.y = pointerX * SKY_MOTION.yawRange;
     root.rotation.x =
       Math.sin(elapsed * 0.05) * 0.04 - pointerY * SKY_MOTION.pitchRange;
     camera.position.x =
@@ -106,7 +110,7 @@ export function bindSkyMotion(
     holdRootEuler.set(
       Math.sin(MILKY_WAY_HOLD_SECONDS * 0.05) * 0.04 -
         pointerY * SKY_MOTION.pitchRange,
-      MILKY_WAY_HOLD_SECONDS * 0.008 + pointerX * SKY_MOTION.yawRange,
+      MILKY_WAY_HOLD_SECONDS * STAR_DRIFT_RATE + pointerX * SKY_MOTION.yawRange,
       0
     );
     holdRootMatrix.makeRotationFromEuler(holdRootEuler);

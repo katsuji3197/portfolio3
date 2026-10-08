@@ -12,6 +12,7 @@ export type PointQuadInput = {
   colors?: Float32Array;
   sizes?: Float32Array;
   twinkles?: Float32Array;
+  bounds?: Float32Array;
 };
 
 export type PointQuadGeometry = {
@@ -20,6 +21,7 @@ export type PointQuadGeometry = {
   colors?: Float32Array;
   sizes?: Float32Array;
   twinkles?: Float32Array;
+  bounds?: Float32Array;
 };
 
 /**
@@ -33,6 +35,7 @@ export function expandPointQuads(input: PointQuadInput): PointQuadGeometry {
   const colors = input.colors ? new Float32Array(count * 6 * 3) : undefined;
   const sizes = input.sizes ? new Float32Array(count * 6) : undefined;
   const twinkles = input.twinkles ? new Float32Array(count * 6 * 3) : undefined;
+  const bounds = input.bounds ? new Float32Array(count * 6) : undefined;
 
   for (let i = 0; i < count; i += 1) {
     const px = input.positions[i * 3];
@@ -58,8 +61,11 @@ export function expandPointQuads(input: PointQuadInput): PointQuadGeometry {
         twinkles[vertex * 3 + 1] = input.twinkles[i * 3 + 1];
         twinkles[vertex * 3 + 2] = input.twinkles[i * 3 + 2];
       }
+      if (bounds && input.bounds) {
+        bounds[vertex] = input.bounds[i];
+      }
     }
   }
 
-  return { centers, corners, colors, sizes, twinkles };
+  return { centers, corners, colors, sizes, twinkles, bounds };
 }

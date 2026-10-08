@@ -26,7 +26,7 @@ export type StarLayerConfig = {
 
 export const STAR_LAYERS: StarLayerConfig[] = [
   {
-    count: 3470,
+    count: 10410,
     planeZ: -280,
     thickness: 220,
     sizeMin: 3.1,
@@ -37,7 +37,7 @@ export const STAR_LAYERS: StarLayerConfig[] = [
     parallax: 4,
   },
   {
-    count: 2000,
+    count: 6000,
     planeZ: 80,
     thickness: 180,
     sizeMin: 3.4,
@@ -48,7 +48,7 @@ export const STAR_LAYERS: StarLayerConfig[] = [
     parallax: 9,
   },
   {
-    count: 800,
+    count: 2400,
     planeZ: 320,
     thickness: 120,
     sizeMin: 3.7,
@@ -59,7 +59,7 @@ export const STAR_LAYERS: StarLayerConfig[] = [
     parallax: 16,
   },
   {
-    count: 67,
+    count: 201,
     planeZ: 460,
     thickness: 50,
     sizeMin: 5,
@@ -70,6 +70,14 @@ export const STAR_LAYERS: StarLayerConfig[] = [
     parallax: 24,
   },
 ];
+
+/**
+ * Yaw rate the sky root used to spin at. A star at local z moves across the
+ * view at dx/dt = z * STAR_DRIFT_RATE. The live sky keeps that speed, but
+ * wraps inside the original box instead of rotating the box out of frame.
+ * The frozen Milky Way pose still uses this same rate at t = 4 min.
+ */
+export const STAR_DRIFT_RATE = 0.008;
 
 /**
  * WebGPU can carry more screen quads, so each layer grows by this factor.
@@ -186,16 +194,45 @@ export function fillStarAttributes(
   return { positions, colors, sizes, twinkles };
 }
 
-export function randomViewportPosition(planeZ: number, thickness: number) {
+/** Box the star layer is scattered in. The shader wraps X inside halfWidth. */
+export function starLayerHalfExtents(planeZ: number) {
   const dist = Math.max(CAMERA_Z - planeZ, 80);
   const halfHeight =
     Math.tan(((CAMERA_FOV * Math.PI) / 180) * 0.5) * dist * 1.2;
   const halfWidth = halfHeight * 1.85;
+  return { halfWidth, halfHeight };
+}
+
+export function randomViewportPosition(
+  planeZ: number,
+  thickness: number,
+  rand: () => number = Math.random
+) {
+  const { halfWidth, halfHeight } = starLayerHalfExtents(planeZ);
   return {
-    x: (Math.random() * 2 - 1) * halfWidth,
-    y: (Math.random() * 2 - 1) * halfHeight,
-    z: planeZ + (Math.random() - 0.5) * thickness,
+    x: (rand() * 2 - 1) * halfWidth,
+    y: (rand() * 2 - 1) * halfHeight,
+    z: planeZ + (rand() - 0.5) * thickness,
   };
+}
+
+/**
+ * Keep a star inside its layer box while it drifts at the old yaw's
+ * initial speed (dx/dt = z * STAR_DRIFT_RATE). Wrapping at the box edge
+ * is off screen, so the viewport stays full at every elapsed time.
+ * Matches `mod(shifted + halfWidth, span) - halfWidth` in the shaders.
+ */
+export function wrapDriftedX(
+  x: number,
+  z: number,
+  elapsed: number,
+  halfWidth: number
+) {
+  const span = halfWidth * 2;
+  const shifted = x + z * STAR_DRIFT_RATE * elapsed;
+  const wrapped =
+    shifted + halfWidth - span * Math.floor((shifted + halfWidth) / span);
+  return wrapped - halfWidth;
 }
 
 function pickStarColor(color: { r: number; g: number; b: number }) {

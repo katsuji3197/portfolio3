@@ -27,6 +27,7 @@ import {
   CAMERA_Z,
   fillStarAttributes,
   randomViewportPosition,
+  starLayerHalfExtents,
   starLayersForBackend,
 } from '@/lib/night-sky-data';
 import {
@@ -89,7 +90,9 @@ export async function mountWebGPUSky(
       config.brightnessMax,
       config.twinkleAmp
     );
-    const quads = expandPointQuads(attrs);
+    const bounds = new Float32Array(config.count);
+    bounds.fill(starLayerHalfExtents(config.planeZ).halfWidth);
+    const quads = expandPointQuads({ ...attrs, bounds });
     const geometry = new BufferGeometry();
     geometry.setAttribute(
       'position',
@@ -114,6 +117,10 @@ export async function mountWebGPUSky(
     geometry.setAttribute(
       'aTwinkle',
       new Float32BufferAttribute(quads.twinkles ?? new Float32Array(), 3)
+    );
+    geometry.setAttribute(
+      'aBound',
+      new Float32BufferAttribute(quads.bounds ?? new Float32Array(), 1)
     );
     const mesh = new Mesh(geometry, stars.material);
     mesh.frustumCulled = false;

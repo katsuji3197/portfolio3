@@ -41,6 +41,7 @@ import {
 import {
   createStarSpriteCanvas,
   MILKY_WAY_HOLD_SECONDS,
+  STAR_DRIFT_RATE,
 } from '@/lib/night-sky-data';
 import { capDevicePixelRatio } from '@/lib/webgl-playback';
 
@@ -86,13 +87,22 @@ export function createWebGPUStarMaterial(renderer: WebGPURenderer) {
     )
   );
   const aCenter = attribute('aCenter', 'vec3');
+  const aBound = attribute('aBound', 'float');
   const aCorner = attribute('aCorner', 'vec2');
   const aColor = attribute('aColor', 'vec3');
   const aSize = attribute('aSize', 'float');
   const aTwinkle = attribute('aTwinkle', 'vec3');
 
   const vertexNode = Fn(() => {
-    const center = modelViewMatrix.mul(vec4(aCenter, i1()));
+    const span = aBound.mul(float(2));
+    const shifted = aCenter.x.add(
+      aCenter.z.mul(float(STAR_DRIFT_RATE)).mul(uTime)
+    );
+    const wrappedX = shifted.sub(
+      span.mul(floor(shifted.add(aBound).div(span)))
+    );
+    const drifted = vec3(wrappedX, aCenter.y, aCenter.z);
+    const center = modelViewMatrix.mul(vec4(drifted, i1()));
     const depth = max(center.z.negate(), float(0.001));
     const pointSize = max(
       aSize.mul(uPixelRatio).mul(float(300).div(max(depth, float(80)))),
