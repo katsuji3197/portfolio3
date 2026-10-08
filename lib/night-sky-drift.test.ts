@@ -1,10 +1,10 @@
 import { describe, expect, it } from '@jest/globals';
 import { Group, PerspectiveCamera, Vector3 } from 'three';
+import { placeClearedStar, wrapClearedStar } from './milky-way-clearance';
 import {
   CAMERA_FOV,
   CAMERA_Z,
   STAR_DRIFT_RATE,
-  randomViewportPosition,
   starLayerHalfExtents,
   starLayersForBackend,
   wrapDriftedX,
@@ -21,16 +21,14 @@ function mulberry32(seed: number) {
   };
 }
 
-type Star = { x: number; y: number; z: number; halfWidth: number };
+type Star = ReturnType<typeof placeClearedStar>;
 
 function buildStars(backend: 'webgl' | 'webgpu', seed: number): Star[] {
   const rand = mulberry32(seed);
   const stars: Star[] = [];
   for (const layer of starLayersForBackend(backend)) {
-    const { halfWidth } = starLayerHalfExtents(layer.planeZ);
     for (let i = 0; i < layer.count; i += 1) {
-      const pos = randomViewportPosition(layer.planeZ, layer.thickness, rand);
-      stars.push({ ...pos, halfWidth });
+      stars.push(placeClearedStar(layer, rand));
     }
   }
   return stars;
@@ -56,7 +54,7 @@ function visibleStars(stars: Star[], aspect: number, elapsed: number) {
   let visible = 0;
 
   for (const star of stars) {
-    const x = wrapDriftedX(star.x, star.z, elapsed, star.halfWidth);
+    const x = wrapClearedStar(star, elapsed);
     world.set(x, star.y, star.z).applyMatrix4(root.matrixWorld);
     ndc.copy(world).project(camera);
     if (ndc.z < -1 || ndc.z > 1) continue;

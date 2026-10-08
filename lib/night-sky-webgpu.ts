@@ -25,11 +25,9 @@ import { bindSkyMotion } from '@/lib/night-sky-motion';
 import {
   CAMERA_FOV,
   CAMERA_Z,
-  fillStarAttributes,
-  randomViewportPosition,
-  starLayerHalfExtents,
   starLayersForBackend,
 } from '@/lib/night-sky-data';
+import { fillClearedStarAttributes } from '@/lib/milky-way-clearance';
 import {
   markRendererBackend,
   type NightSkyRuntime,
@@ -81,18 +79,8 @@ export async function mountWebGPUSky(
 
   for (const config of layerConfigs) {
     starCount += config.count;
-    const attrs = fillStarAttributes(
-      config.count,
-      () => randomViewportPosition(config.planeZ, config.thickness),
-      config.sizeMin,
-      config.sizeMax,
-      config.brightnessMin,
-      config.brightnessMax,
-      config.twinkleAmp
-    );
-    const bounds = new Float32Array(config.count);
-    bounds.fill(starLayerHalfExtents(config.planeZ).halfWidth);
-    const quads = expandPointQuads({ ...attrs, bounds });
+    const { attrs, wraps } = fillClearedStarAttributes(config);
+    const quads = expandPointQuads({ ...attrs, wraps });
     const geometry = new BufferGeometry();
     geometry.setAttribute(
       'position',
@@ -119,8 +107,8 @@ export async function mountWebGPUSky(
       new Float32BufferAttribute(quads.twinkles ?? new Float32Array(), 3)
     );
     geometry.setAttribute(
-      'aBound',
-      new Float32BufferAttribute(quads.bounds ?? new Float32Array(), 1)
+      'aWrap',
+      new Float32BufferAttribute(quads.wraps ?? new Float32Array(), 4)
     );
     const mesh = new Mesh(geometry, stars.material);
     mesh.frustumCulled = false;

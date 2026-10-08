@@ -32,14 +32,12 @@ import {
   CAMERA_FOV,
   CAMERA_Z,
   createStarSpriteCanvas,
-  fillStarAttributes,
   MILKY_WAY_HOLD_SECONDS,
-  randomViewportPosition,
   STAR_DRIFT_RATE,
   STAR_LAYERS,
-  starLayerHalfExtents,
   type StarLayerConfig,
 } from '@/lib/night-sky-data';
+import { fillClearedStarAttributes } from '@/lib/milky-way-clearance';
 import {
   markRendererBackend,
   type NightSkyRuntime,
@@ -159,11 +157,10 @@ export function mountWebGLSky(container: HTMLElement): NightSkyRuntime {
   };
 }
 
-function createStarMaterial(map: Texture, halfWidth: number) {
+function createStarMaterial(map: Texture) {
   return new ShaderMaterial({
     uniforms: {
       uTime: { value: 0 },
-      uHalfWidth: { value: halfWidth },
       uPixelRatio: {
         value: capDevicePixelRatio(
           typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1
@@ -175,19 +172,39 @@ function createStarMaterial(map: Texture, halfWidth: number) {
       attribute vec3 aColor;
       attribute float aSize;
       attribute vec3 aTwinkle;
+      attribute vec4 aWrap;
       varying vec3 vColor;
       varying float vAlpha;
       uniform float uTime;
-      uniform float uHalfWidth;
       uniform float uPixelRatio;
 
       void main() {
         vColor = aColor;
         float twinkle = 0.82 + aTwinkle.z * sin(uTime * aTwinkle.y + aTwinkle.x);
         vAlpha = clamp(twinkle, 0.45, 1.25);
-        float span = uHalfWidth * 2.0;
-        float shifted = position.x + position.z * ${STAR_DRIFT_RATE} * uTime;
-        float wrappedX = mod(shifted + uHalfWidth, span) - uHalfWidth;
+        // Same drift as wrapClearedStar. mode >= 0.5 skips the Milky Way
+        // gap; otherwise X wraps inside the behind-the-band interval.
+        float drift = position.z * ${STAR_DRIFT_RATE} * uTime;
+        float wrappedX;
+        if (aWrap.x >= 0.5) {
+          float halfW = aWrap.w;
+          float gapLo = aWrap.y;
+          float gapHi = aWrap.z;
+          float right = halfW - gapHi;
+          float safeSpan = max(halfW * 2.0 - (gapHi - gapLo), 0.001);
+          float s0 = position.x >= gapHi
+            ? position.x - gapHi
+            : position.x + halfW * 2.0 - gapHi;
+          float s = s0 + drift;
+          s = s - safeSpan * floor(s / safeSpan);
+          wrappedX = s <= right ? gapHi + s : -halfW + (s - right);
+        } else {
+          float lo = aWrap.y;
+          float hi = aWrap.z;
+          float span = max(hi - lo, 0.001);
+          float shifted = position.x + drift;
+          wrappedX = lo + (shifted - lo) - span * floor((shifted - lo) / span);
+        }
         vec3 drifted = vec3(wrappedX, position.y, position.z);
         vec4 mvPosition = modelViewMatrix * vec4(drifted, 1.0);
         gl_PointSize = max(
@@ -218,15 +235,7 @@ function createStarMaterial(map: Texture, halfWidth: number) {
 }
 
 function createViewportStarLayer(map: Texture, config: StarLayerConfig) {
-  const attrs = fillStarAttributes(
-    config.count,
-    () => randomViewportPosition(config.planeZ, config.thickness),
-    config.sizeMin,
-    config.sizeMax,
-    config.brightnessMin,
-    config.brightnessMax,
-    config.twinkleAmp
-  );
+  const { attrs, wraps } = fillClearedStarAttributes(config);
 
   const geometry = new BufferGeometry();
   geometry.setAttribute(
@@ -239,9 +248,9 @@ function createViewportStarLayer(map: Texture, config: StarLayerConfig) {
     'aTwinkle',
     new Float32BufferAttribute(attrs.twinkles, 3)
   );
+  geometry.setAttribute('aWrap', new Float32BufferAttribute(wraps, 4));
 
-  const { halfWidth } = starLayerHalfExtents(config.planeZ);
-  const material = createStarMaterial(map, halfWidth);
+  const material = createStarMaterial(map);
   const points = new Points(geometry, material);
   const group = new Group();
   group.add(points);

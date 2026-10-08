@@ -27,6 +27,7 @@ import {
   max,
   mix,
   modelViewMatrix,
+  select,
   sin,
   smoothstep,
   texture,
@@ -87,19 +88,43 @@ export function createWebGPUStarMaterial(renderer: WebGPURenderer) {
     )
   );
   const aCenter = attribute('aCenter', 'vec3');
-  const aBound = attribute('aBound', 'float');
+  const aWrap = attribute('aWrap', 'vec4');
   const aCorner = attribute('aCorner', 'vec2');
   const aColor = attribute('aColor', 'vec3');
   const aSize = attribute('aSize', 'float');
   const aTwinkle = attribute('aTwinkle', 'vec3');
 
   const vertexNode = Fn(() => {
-    const span = aBound.mul(float(2));
-    const shifted = aCenter.x.add(
-      aCenter.z.mul(float(STAR_DRIFT_RATE)).mul(uTime)
+    // Same drift as wrapClearedStar / the WebGL star shader.
+    const drift = aCenter.z.mul(float(STAR_DRIFT_RATE)).mul(uTime);
+    const halfW = aWrap.w;
+    const gapLo = aWrap.y;
+    const gapHi = aWrap.z;
+    const right = halfW.sub(gapHi);
+    const safeSpan = max(
+      halfW.mul(float(2)).sub(gapHi.sub(gapLo)),
+      float(0.001)
     );
-    const wrappedX = shifted.sub(
-      span.mul(floor(shifted.add(aBound).div(span)))
+    const s0 = select(
+      aCenter.x.greaterThanEqual(gapHi),
+      aCenter.x.sub(gapHi),
+      aCenter.x.add(halfW.mul(float(2))).sub(gapHi)
+    );
+    const s = s0.add(drift);
+    const sWrapped = s.sub(safeSpan.mul(floor(s.div(safeSpan))));
+    const gappedX = select(
+      sWrapped.lessThanEqual(right),
+      gapHi.add(sWrapped),
+      halfW.negate().add(sWrapped.sub(right))
+    );
+    const span = max(gapHi.sub(gapLo), float(0.001));
+    const shifted = aCenter.x.add(drift);
+    const into = shifted.sub(gapLo);
+    const linearX = gapLo.add(into.sub(span.mul(floor(into.div(span)))));
+    const wrappedX = select(
+      aWrap.x.greaterThanEqual(float(0.5)),
+      gappedX,
+      linearX
     );
     const drifted = vec3(wrappedX, aCenter.y, aCenter.z);
     const center = modelViewMatrix.mul(vec4(drifted, i1()));
