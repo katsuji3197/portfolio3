@@ -32,12 +32,15 @@ import {
   CAMERA_FOV,
   CAMERA_Z,
   createStarSpriteCanvas,
-  fillStarAttributes,
   MILKY_WAY_HOLD_SECONDS,
-  randomViewportPosition,
+  STAR_DRIFT_RATE,
   STAR_LAYERS,
   type StarLayerConfig,
 } from '@/lib/night-sky-data';
+import {
+  fillClearedStarAttributes,
+  MILKY_DEPTH_FADE_SECONDS,
+} from '@/lib/milky-way-clearance';
 import {
   markRendererBackend,
   type NightSkyRuntime,
@@ -172,6 +175,7 @@ function createStarMaterial(map: Texture) {
       attribute vec3 aColor;
       attribute float aSize;
       attribute vec3 aTwinkle;
+      attribute vec4 aWrap;
       varying vec3 vColor;
       varying float vAlpha;
       uniform float uTime;
@@ -181,7 +185,48 @@ function createStarMaterial(map: Texture) {
         vColor = aColor;
         float twinkle = 0.82 + aTwinkle.z * sin(uTime * aTwinkle.y + aTwinkle.x);
         vAlpha = clamp(twinkle, 0.45, 1.25);
-        vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+        // Same drift as wrapClearedStar. mode >= 0.5 skips the Milky Way
+        // gap; otherwise X wraps inside the behind-the-band interval.
+        float drift = position.z * ${STAR_DRIFT_RATE} * uTime;
+        float gapLo = aWrap.y;
+        float gapHi = aWrap.z;
+        float wrappedX;
+        if (aWrap.x >= 0.5) {
+          float halfW = aWrap.w;
+          float right = halfW - gapHi;
+          float safeSpan = max(halfW * 2.0 - (gapHi - gapLo), 0.001);
+          float s0 = position.x >= gapHi
+            ? position.x - gapHi
+            : position.x + halfW * 2.0 - gapHi;
+          float s = s0 + drift;
+          s = s - safeSpan * floor(s / safeSpan);
+          wrappedX = s <= right ? gapHi + s : -halfW + (s - right);
+        } else {
+          float span = max(gapHi - gapLo, 0.001);
+          float shifted = position.x + drift;
+          wrappedX = gapLo + (shifted - gapLo) - span * floor((shifted - gapLo) / span);
+        }
+        // Same curve as milkyDepthFade: out as a near star meets the band,
+        // in again on the far side and for the copy placed behind the mesh.
+        float gap = gapHi - gapLo;
+        float fade = 1.0;
+        if (gap > 0.01) {
+          float width = max(abs(position.z) * ${STAR_DRIFT_RATE * MILKY_DEPTH_FADE_SECONDS}, 0.001);
+          float dist;
+          float reach = width;
+          if (aWrap.x >= 0.5) {
+            if (wrappedX >= gapHi) dist = wrappedX - gapHi;
+            else if (wrappedX <= gapLo) dist = gapLo - wrappedX;
+            else dist = 0.0;
+          } else {
+            dist = max(0.0, min(wrappedX - gapLo, gapHi - wrappedX));
+            reach = min(width, max(gap * 0.5, 0.001));
+          }
+          fade = smoothstep(0.0, reach, dist);
+        }
+        vAlpha *= fade;
+        vec3 drifted = vec3(wrappedX, position.y, position.z);
+        vec4 mvPosition = modelViewMatrix * vec4(drifted, 1.0);
         gl_PointSize = max(
           aSize * uPixelRatio * (300.0 / max(-mvPosition.z, 80.0)),
           0.9 * uPixelRatio
@@ -210,15 +255,7 @@ function createStarMaterial(map: Texture) {
 }
 
 function createViewportStarLayer(map: Texture, config: StarLayerConfig) {
-  const attrs = fillStarAttributes(
-    config.count,
-    () => randomViewportPosition(config.planeZ, config.thickness),
-    config.sizeMin,
-    config.sizeMax,
-    config.brightnessMin,
-    config.brightnessMax,
-    config.twinkleAmp
-  );
+  const { attrs, wraps } = fillClearedStarAttributes(config);
 
   const geometry = new BufferGeometry();
   geometry.setAttribute(
@@ -231,6 +268,7 @@ function createViewportStarLayer(map: Texture, config: StarLayerConfig) {
     'aTwinkle',
     new Float32BufferAttribute(attrs.twinkles, 3)
   );
+  geometry.setAttribute('aWrap', new Float32BufferAttribute(wraps, 4));
 
   const material = createStarMaterial(map);
   const points = new Points(geometry, material);

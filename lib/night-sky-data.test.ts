@@ -9,7 +9,7 @@ describe('starLayersForBackend', () => {
   it('keeps the WebGL counts, sizes, and brightness', () => {
     const layers = starLayersForBackend('webgl');
     expect(layers).toBe(STAR_LAYERS);
-    expect(layers.map(layer => layer.count)).toEqual([3470, 2000, 800, 67]);
+    expect(layers.map(layer => layer.count)).toEqual([10410, 6000, 2400, 201]);
   });
 
   it('scales only the WebGPU count by about 1.5', () => {
