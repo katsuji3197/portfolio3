@@ -3,6 +3,7 @@ import { PerspectiveCamera, Vector3 } from 'three';
 import { CAMERA_FOV, CAMERA_Z } from './night-sky-data';
 import {
   PETAL_MAX_ALIVE,
+  PETAL_POOL,
   applyPetalPoses,
   createCherryPetalSimulation,
   createPetalSystem,
@@ -15,10 +16,10 @@ import {
 const zero = () => 0;
 
 describe('petalSpawnDelay', () => {
-  it('stays inside 8 to 11 seconds', () => {
-    expect(petalSpawnDelay(() => 0)).toBe(8);
-    expect(petalSpawnDelay(() => 1)).toBe(11);
-    expect(petalSpawnDelay(() => 0.5)).toBe(9.5);
+  it('stays inside 4 to 5.5 seconds', () => {
+    expect(petalSpawnDelay(() => 0)).toBe(4);
+    expect(petalSpawnDelay(() => 1)).toBe(5.5);
+    expect(petalSpawnDelay(() => 0.5)).toBe(4.75);
   });
 });
 
@@ -27,13 +28,13 @@ describe('stepPetalSystem', () => {
     const system = createPetalSystem(zero);
     let born: PetalPose[] = [];
     let elapsed = 0;
-    while (born.length === 0 && elapsed < 12) {
+    while (born.length === 0 && elapsed < 6) {
       born = stepPetalSystem(system, 0.05);
       elapsed += 0.05;
     }
 
-    expect(elapsed).toBeGreaterThanOrEqual(8);
-    expect(elapsed).toBeLessThan(8.2);
+    expect(elapsed).toBeGreaterThanOrEqual(4);
+    expect(elapsed).toBeLessThan(4.2);
     expect(born).toHaveLength(1);
     expect(born[0].alpha).toBeLessThan(0.25);
     expect(born[0].y).toBeGreaterThan(-0.6);
@@ -157,7 +158,7 @@ describe('stepPetalSystem', () => {
   it('does not advance while reduced motion is on', () => {
     let reduced = false;
     const simulation = createCherryPetalSimulation(zero, () => reduced);
-    stepUntil(simulation.step, 9);
+    stepUntil(simulation.step, 4.2);
     expect(simulation.system.petals.length).toBe(1);
 
     reduced = true;
@@ -168,6 +169,27 @@ describe('stepPetalSystem', () => {
     reduced = false;
     simulation.step(0.05);
     expect(simulation.system.spawnIn).toBeCloseTo(waiting - 0.05, 5);
+  });
+
+  it('never skips a spawn while the pool can hold every live petal', () => {
+    expect(PETAL_POOL).toBeGreaterThanOrEqual(PETAL_MAX_ALIVE);
+    for (const rng of [zero, mulberry32(1), mulberry32(4), mulberry32(99)]) {
+      const system = createPetalSystem(rng);
+      let attempts = 0;
+      let dropped = 0;
+      for (let i = 0; i < 2400; i += 1) {
+        if (system.spawnIn <= 0.05) {
+          attempts += 1;
+          if (system.petals.length >= PETAL_MAX_ALIVE) {
+            dropped += 1;
+          }
+        }
+        stepPetalSystem(system, 0.05);
+        expect(system.petals.length).toBeLessThanOrEqual(PETAL_MAX_ALIVE);
+      }
+      expect(attempts).toBeGreaterThan(15);
+      expect(dropped).toBe(0);
+    }
   });
 });
 

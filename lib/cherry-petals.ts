@@ -1,12 +1,14 @@
 /**
- * One magenta cherry petal at a time, occasionally two. The pose is a
- * function of age so a paused tab (dt stops with the sky loop) resumes
- * without a jump. Both renderers draw whatever `step` returns.
+ * Usually one magenta cherry petal, occasionally two or three. The pose
+ * is a function of age so a paused tab (dt stops with the sky loop)
+ * resumes without a jump. Both renderers draw whatever `step` returns.
+ * The pool matches the cap: a petal lives under 12s, so a 4s interval
+ * never has to skip a spawn.
  */
 
-export const PETAL_SPAWN_MIN_SEC = 8;
-export const PETAL_SPAWN_MAX_SEC = 11;
-export const PETAL_MAX_ALIVE = 2;
+export const PETAL_SPAWN_MIN_SEC = 4;
+export const PETAL_SPAWN_MAX_SEC = 5.5;
+export const PETAL_MAX_ALIVE = 3;
 export const PETAL_DISTANCE = 210;
 export const PETAL_POOL = PETAL_MAX_ALIVE;
 
