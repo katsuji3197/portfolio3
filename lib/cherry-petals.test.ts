@@ -1,4 +1,6 @@
 import { describe, expect, it } from '@jest/globals';
+import { PerspectiveCamera, Vector3 } from 'three';
+import { CAMERA_FOV, CAMERA_Z } from './night-sky-data';
 import {
   PETAL_MAX_ALIVE,
   applyPetalPoses,
@@ -34,9 +36,10 @@ describe('stepPetalSystem', () => {
     expect(elapsed).toBeLessThan(8.2);
     expect(born).toHaveLength(1);
     expect(born[0].alpha).toBeLessThan(0.25);
-    expect(born[0].y).toBeGreaterThan(0.6);
-    expect(born[0].x).toBeGreaterThan(-0.4);
-    expect(born[0].x).toBeLessThan(1.4);
+    expect(born[0].y).toBeGreaterThan(-0.6);
+    expect(born[0].y).toBeLessThan(1.45);
+    expect(born[0].x).toBeGreaterThan(-1.25);
+    expect(born[0].x).toBeLessThan(1.25);
     expect(born[0].depth).toBeGreaterThan(0.5);
     expect(born[0].depth).toBeLessThan(1.7);
     expect(born[0].scale).toBeGreaterThanOrEqual(10);
@@ -47,8 +50,8 @@ describe('stepPetalSystem', () => {
       stepPetalSystem(system, 0.05);
     }
     const later = stepPetalSystem(system, 0.05);
-    expect(later[0].y).toBeLessThan(falling[0].y - 0.25);
-    expect(later[0].x).toBeLessThan(falling[0].x - 0.3);
+    expect(later[0].y).toBeLessThan(falling[0].y - 0.15);
+    expect(Math.abs(later[0].x - falling[0].x)).toBeGreaterThan(0.3);
     expect(later[0].alpha).toBeGreaterThan(born[0].alpha);
   });
 
@@ -98,8 +101,10 @@ describe('stepPetalSystem', () => {
     const vertical = windowSpeeds(track.y);
     expect(vertical.some(speed => speed > -0.05)).toBe(true);
     expect(vertical.some(speed => speed < -0.18)).toBe(true);
-    expect(track.y[track.y.length - 1]).toBeLessThan(track.y[0] - 0.8);
-    expect(track.x[track.x.length - 1]).toBeLessThan(track.x[0] - 0.4);
+    expect(track.y[track.y.length - 1]).toBeLessThan(track.y[0] - 0.5);
+    expect(Math.abs(track.x[track.x.length - 1] - track.x[0])).toBeGreaterThan(
+      0.4
+    );
 
     const varied = createPetalSystem(mulberry32(3));
     const rises: number[] = [];
@@ -166,6 +171,37 @@ describe('stepPetalSystem', () => {
   });
 });
 
+describe('viewport coverage', () => {
+  it('spreads paths across both sides of the diagonal at every depth', () => {
+    for (const aspect of [16 / 9, 9 / 16]) {
+      const coverage = projectSpawns(aspect, 2000, mulberry32(11));
+      expect(coverage.total).toBeGreaterThan(10_000);
+      for (const share of [
+        coverage.tl,
+        coverage.tr,
+        coverage.bl,
+        coverage.br,
+      ]) {
+        expect(share).toBeGreaterThan(0.15);
+        expect(share).toBeLessThan(0.4);
+      }
+      expect(coverage.above).toBeGreaterThan(0.35);
+      expect(coverage.above).toBeLessThan(0.65);
+      expect(coverage.below).toBeGreaterThan(0.35);
+      expect(coverage.below).toBeLessThan(0.65);
+      expect(coverage.maxNdcError).toBeLessThan(1e-4);
+
+      for (const band of coverage.depths) {
+        expect(band.total).toBeGreaterThan(1000);
+        expect(band.br).toBeGreaterThan(0.12);
+        expect(band.bl).toBeGreaterThan(0.12);
+        expect(band.above).toBeGreaterThan(0.3);
+        expect(band.above).toBeLessThan(0.7);
+      }
+    }
+  });
+});
+
 describe('applyPetalPoses', () => {
   it('places a centered petal in front of the camera and hides the rest', () => {
     const views = [fakeView(), fakeView()];
@@ -189,6 +225,126 @@ describe('applyPetalPoses', () => {
     expect(views[1].opacity).toBe(0);
   });
 });
+
+function projectSpawns(aspect: number, spawnTarget: number, rng: () => number) {
+  const system = createPetalSystem(rng);
+  const camera = new PerspectiveCamera(CAMERA_FOV, aspect, 1, 4000);
+  camera.position.set(Math.sin(1.2) * 8, Math.cos(1) * 5, CAMERA_Z);
+  camera.lookAt(2, -1, 0);
+  camera.updateMatrixWorld(true);
+
+  const view = fakeView();
+  const world = new Vector3();
+  const ndc = new Vector3();
+  const counts = { tl: 0, tr: 0, bl: 0, br: 0, above: 0, below: 0, total: 0 };
+  const bands = {
+    near: { tl: 0, tr: 0, bl: 0, br: 0, above: 0, below: 0, total: 0 },
+    mid: { tl: 0, tr: 0, bl: 0, br: 0, above: 0, below: 0, total: 0 },
+    far: { tl: 0, tr: 0, bl: 0, br: 0, above: 0, below: 0, total: 0 },
+  };
+  let maxNdcError = 0;
+  let spawns = 0;
+  let prev = 0;
+
+  for (let i = 0; i < 3_000_000 && spawns < spawnTarget; i += 1) {
+    const poses = stepPetalSystem(system, 0.05);
+    if (poses.length > prev) {
+      spawns += poses.length - prev;
+    }
+    prev = poses.length;
+    for (const pose of poses) {
+      if (pose.alpha < 0.08) {
+        continue;
+      }
+      applyPetalPoses([view], [pose], camera);
+      const position = view.mesh.position as unknown as {
+        x: number;
+        y: number;
+        z: number;
+      };
+      world
+        .set(position.x, position.y, position.z)
+        .applyMatrix4(camera.matrixWorld);
+      ndc.copy(world).project(camera);
+      maxNdcError = Math.max(
+        maxNdcError,
+        Math.abs(ndc.x - pose.x),
+        Math.abs(ndc.y - pose.y)
+      );
+      if (ndc.z < -1 || ndc.z > 1) {
+        continue;
+      }
+      if (ndc.x < -1 || ndc.x > 1 || ndc.y < -1 || ndc.y > 1) {
+        continue;
+      }
+      const band =
+        pose.depth < 0.9
+          ? bands.near
+          : pose.depth < 1.25
+            ? bands.mid
+            : bands.far;
+      tally(counts, ndc.x, ndc.y);
+      tally(band, ndc.x, ndc.y);
+    }
+  }
+
+  return {
+    ...shares(counts),
+    maxNdcError,
+    depths: [shares(bands.near), shares(bands.mid), shares(bands.far)],
+  };
+}
+
+function tally(
+  bucket: {
+    tl: number;
+    tr: number;
+    bl: number;
+    br: number;
+    above: number;
+    below: number;
+    total: number;
+  },
+  x: number,
+  y: number
+) {
+  bucket.total += 1;
+  if (x < 0 && y >= 0) {
+    bucket.tl += 1;
+  } else if (x >= 0 && y >= 0) {
+    bucket.tr += 1;
+  } else if (x < 0) {
+    bucket.bl += 1;
+  } else {
+    bucket.br += 1;
+  }
+  if (x + y > 0) {
+    bucket.above += 1;
+  } else {
+    bucket.below += 1;
+  }
+}
+
+function shares(bucket: {
+  tl: number;
+  tr: number;
+  bl: number;
+  br: number;
+  above: number;
+  below: number;
+  total: number;
+}) {
+  const share = (count: number) => count / Math.max(bucket.total, 1);
+  return {
+    total: bucket.total,
+    tl: share(bucket.tl),
+    tr: share(bucket.tr),
+    bl: share(bucket.bl),
+    br: share(bucket.br),
+    above: share(bucket.above),
+    below: share(bucket.below),
+  };
+}
 
 function firstPetalTrack(rng: () => number) {
   const system = createPetalSystem(rng);
