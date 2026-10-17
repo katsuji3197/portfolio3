@@ -1,12 +1,14 @@
 /**
- * One magenta cherry petal at a time, occasionally two. The pose is a
- * function of age so a paused tab (dt stops with the sky loop) resumes
- * without a jump. Both renderers draw whatever `step` returns.
+ * Usually one magenta cherry petal, occasionally two or three. The pose
+ * is a function of age so a paused tab (dt stops with the sky loop)
+ * resumes without a jump. Both renderers draw whatever `step` returns.
+ * The pool matches the cap: a petal lives under 12s, so a 4s interval
+ * never has to skip a spawn.
  */
 
-export const PETAL_SPAWN_MIN_SEC = 8;
-export const PETAL_SPAWN_MAX_SEC = 11;
-export const PETAL_MAX_ALIVE = 2;
+export const PETAL_SPAWN_MIN_SEC = 4;
+export const PETAL_SPAWN_MAX_SEC = 5.5;
+export const PETAL_MAX_ALIVE = 3;
 export const PETAL_DISTANCE = 210;
 export const PETAL_POOL = PETAL_MAX_ALIVE;
 
@@ -199,17 +201,37 @@ export function createPetalSpriteCanvas(): HTMLCanvasElement {
 function spawnPetal(rng: () => number): Petal {
   const tumbleAmp = 0.4 + rng() * 0.85;
   const tumbleAxis = rng() * Math.PI * 2;
+  // Pose x/y are frustum-normalized. ±1 is the screen edge after
+  // applyPetalPoses, at every depth and at both 16:9 and 9:16.
+  // Wind used to be negative only, and x started in −0.2…1.2, so the
+  // 45° fall stayed above the top-left → bottom-right diagonal and
+  // left the screen before the lower half. Side entries at lower
+  // heights let the same wind speed paint the bottom as well.
+  const wind = 0.26 + rng() * 0.13;
+  const fromSide = rng() < 0.62;
+  let x0;
+  let y0;
+  if (fromSide) {
+    const fromLeft = rng() < 0.5;
+    x0 = fromLeft ? -1.02 : 1.02;
+    y0 = -0.35 + rng() * 1.45;
+  } else {
+    x0 = -1.08 + rng() * 2.16;
+    y0 = 0.92 + rng() * 0.4;
+  }
   return {
-    x0: -0.2 + rng() * 1.4,
-    y0: 0.7 + rng() * 0.62,
+    x0,
+    y0,
     depth0: 0.64 + rng() * 0.78,
     zDrift: (rng() - 0.5) * 0.1,
     zAmp: 0.06 + rng() * 0.16,
     zFreq: 0.32 + rng() * 0.6,
     zPhase: rng() * Math.PI * 2,
-    // Half of the previous 3× fall (0.54–0.78) and wind (−0.52 to −0.78).
+    // Half of the previous 3× fall (0.54–0.78) and wind (0.26–0.39).
+    // The sign follows the far side of the screen so the same speed
+    // crosses the view instead of sliding along one diagonal.
     fall: (0.18 + rng() * 0.08) * 1.5,
-    drift: -(0.26 + rng() * 0.13),
+    drift: (x0 < 0 ? 1 : -1) * wind,
     swayAmp: 0.03 + rng() * 0.18,
     swayFreq: 0.7 + rng() * 2.1,
     phase: rng() * Math.PI * 2,
@@ -322,8 +344,13 @@ function poseOf(petal: Petal): PetalPose {
     const t = (fadeStart - y) / (fadeStart - fadeEnd);
     alpha *= 1 - clamp(t, 0, 1);
   }
+  // Same edge fade on both sides. Wind blows either way, so a petal
+  // can leave through the right edge as well as the left.
   if (x < -0.78) {
     alpha *= 1 - clamp((-0.78 - x) / 0.42, 0, 1);
+  }
+  if (x > 0.78) {
+    alpha *= 1 - clamp((x - 0.78) / 0.42, 0, 1);
   }
 
   return {
