@@ -1,8 +1,36 @@
 packages:
   - '.'
 
+# pnpm 11 以降は package.json の pnpm フィールドを読まない。
+# CI は pnpm の latest（現在は 12 系）なので、overrides はここへ置く。
+#
+# pnpm 12 は公開から 1440 分未満の版をロックファイル検証で拒否する。
+# これらは脆弱性対応で入れた直後の修正版なので、その検証だけ外す。
+minimumReleaseAgeExclude:
+  - qs
+  - baseline-browser-mapping
+  - electron-to-chromium
+
 allowBuilds:
   '@tailwindcss/oxide': true
   '@vercel/speed-insights': false
-  'sharp': true
-  'unrs-resolver': true
+  sharp: true
+  unrs-resolver: true
+
+overrides:
+  postcss: 8.5.32
+  sharp: 0.35.5
+  'tar@>=7 <8': 7.5.22
+  'glob@>=10 <11': 10.5.0
+  'minimatch@>=3 <4': 3.1.5
+  'minimatch@>=9 <10': 9.0.9
+  'flatted@>=3 <4': 3.4.4
+  'picomatch@>=2 <3': 2.3.2
+  'picomatch@>=4 <5': 4.0.7
+  'brace-expansion@>=1 <2': 1.1.21
+  'brace-expansion@>=2 <3': 2.1.7
+  'js-yaml@>=3 <4': 3.15.2
+  'js-yaml@>=4 <5': 4.3.2
+  'ajv@>=6 <7': 6.15.0
+  '@humanfs/node@>=0.16 <0.17': 0.16.8
+  'fflate@>=0.8 <0.9': 0.8.3
