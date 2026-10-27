@@ -17,6 +17,8 @@ function loadMermaid() {
         startOnLoad: false,
         theme: 'dark',
         look: 'classic',
+        // Mermaid 12 の既定レイアウトは ELK。11 までと同じ dagre を維持する。
+        layout: 'dagre',
         securityLevel: 'strict',
         fontFamily:
           'var(--font-noto-sans-jp), ui-sans-serif, system-ui, sans-serif',
