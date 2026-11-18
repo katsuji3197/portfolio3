@@ -26,6 +26,6 @@ export const timelineEntries: TimelineEntry[] = [
   { year: '大学卒業', text: '卒業:金沢工業大学' },
   {
     year: '現在',
-    text: 'フロントエンド実装・デザインを行いながら経験を積んでいる。',
+    text: 'テックリードとして、チームと一緒にデザインと開発の両方に関わっている。',
   },
 ];
